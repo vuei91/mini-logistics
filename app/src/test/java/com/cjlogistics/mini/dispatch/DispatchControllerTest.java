@@ -11,6 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
+import com.cjlogistics.mini.security.JwtTokenService;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -31,6 +32,7 @@ class DispatchControllerTest {
 
     @MockitoBean
     DispatchService dispatchService;
+    @MockitoBean JwtTokenService jwtTokenService;
 
     private Dispatch savedDispatch(Long id, Long shipmentRequestId, Long driverId, double score) {
         Dispatch dispatch = new Dispatch(shipmentRequestId, driverId, score);

@@ -9,6 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
+import com.cjlogistics.mini.security.JwtTokenService;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
@@ -29,6 +30,7 @@ class ShipperControllerTest {
 
     @MockitoBean
     ShipperService shipperService;
+    @MockitoBean JwtTokenService jwtTokenService;
 
     @Test
     void create_returns_201_and_body() throws Exception {

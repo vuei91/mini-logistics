@@ -14,9 +14,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import com.cjlogistics.mini.security.AuthenticatedMember;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequiredArgsConstructor
+@SecurityRequirement(name = "BearerAuth")
 public class DispatchController {
 
     private final DispatchService dispatchService;
@@ -37,20 +41,23 @@ public class DispatchController {
     }
 
     @PostMapping("/dispatches/{id}/accept")
-    public DispatchResponse accept(@PathVariable Long id) {
+    public DispatchResponse accept(@PathVariable Long id, @AuthenticationPrincipal AuthenticatedMember member) {
+        dispatchService.verifyDriverOwnership(id, member.profileId());
         return DispatchResponse.from(dispatchService.accept(id));
     }
 
     @PostMapping("/dispatches/{id}/reject")
-    public DispatchResponse reject(@PathVariable Long id) {
+    public DispatchResponse reject(@PathVariable Long id, @AuthenticationPrincipal AuthenticatedMember member) {
+        dispatchService.verifyDriverOwnership(id, member.profileId());
         return DispatchResponse.from(dispatchService.reject(id));
     }
 
     @PatchMapping("/dispatches/{id}/status")
     public DispatchResponse updateStatus(
             @PathVariable Long id,
-            @Valid @RequestBody DispatchStatusUpdateRequest request
+            @Valid @RequestBody DispatchStatusUpdateRequest request, @AuthenticationPrincipal AuthenticatedMember member
     ) {
+        dispatchService.verifyDriverOwnership(id, member.profileId());
         return DispatchResponse.from(dispatchService.updateShipmentStatus(id, request.status()));
     }
 }

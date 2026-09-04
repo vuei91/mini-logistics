@@ -1,5 +1,7 @@
 package com.cjlogistics.mini.common;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -18,7 +20,7 @@ class OpenApiSmokeTest {
     TestRestTemplate restTemplate;
 
     @Test
-    void api_docs_endpoint_returns_200_and_lists_shippers() {
+    void api_docs_endpoint_returns_200_and_marks_protected_operations_with_bearer_auth() throws Exception {
         ResponseEntity<String> response = restTemplate.getForEntity("/v3/api-docs", String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -30,6 +32,21 @@ class OpenApiSmokeTest {
         assertThat(response.getBody()).contains("/dispatches");
         // 프로젝트 메타데이터 노출
         assertThat(response.getBody()).contains("CJ Logistics Mini API");
+        assertThat(response.getBody()).contains("BearerAuth");
+        assertThat(response.getBody()).contains("bearer");
+        assertThat(response.getBody()).contains("/auth/shippers/signup");
+        assertThat(response.getBody()).contains("/auth/drivers/signup");
+        assertThat(response.getBody()).contains("/auth/shippers/login");
+        assertThat(response.getBody()).contains("/auth/drivers/login");
+        JsonNode openApi = new ObjectMapper().readTree(response.getBody());
+        // 로그인/회원가입은 공개 API이고, 업무 API는 각 operation에 JWT 요구사항을 명시한다.
+        assertThat(openApi.path("security").isMissingNode()).isTrue();
+        assertThat(openApi.path("paths").path("/shipment-requests").path("post")
+                .path("security").get(0).has("BearerAuth")).isTrue();
+        assertThat(openApi.path("paths").path("/shipment-requests").path("post")
+                .path("parameters").toString()).contains("\"name\":\"Authorization\"");
+        assertThat(openApi.path("paths").path("/auth/shippers/login").path("post")
+                .path("security").isMissingNode()).isTrue();
     }
 
     @Test

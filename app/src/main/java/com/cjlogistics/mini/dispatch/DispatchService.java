@@ -43,6 +43,10 @@ public class DispatchService {
         request.startMatching();
 
         MatchCandidate best = candidates.get(0);
+        Driver lockedDriver = driverRepository.findByIdForUpdate(best.driver().getId()).orElseThrow(() -> new NoMatchingDriverException(shipmentRequestId));
+        if (lockedDriver.getStatus() != DriverStatus.AVAILABLE || dispatchRepository.existsByDriverIdAndStatusIn(lockedDriver.getId(), List.of(DispatchStatus.PROPOSED, DispatchStatus.ACCEPTED))) {
+            throw new DriverAlreadyAssignedException(lockedDriver.getId());
+        }
         Dispatch dispatch = new Dispatch(request.getId(), best.driver().getId(), best.score());
         return dispatchRepository.save(dispatch);
     }
@@ -50,6 +54,10 @@ public class DispatchService {
     public Dispatch get(Long id) {
         return dispatchRepository.findById(id)
                 .orElseThrow(() -> new DispatchNotFoundException(id));
+    }
+
+    public void verifyDriverOwnership(Long dispatchId, Long driverId) {
+        if (!get(dispatchId).getDriverId().equals(driverId)) throw new DispatchAccessDeniedException(dispatchId);
     }
 
     @Transactional

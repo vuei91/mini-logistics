@@ -11,13 +11,24 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
 class ShipmentRequestServiceTest {
+
+    @Test
+    void verify_shipper_ownership_rejects_a_different_shipper() {
+        ShipmentRequest request = new ShipmentRequest(10L, "서울", "부산", List.of(new CargoItem("화물", 1)), VehicleType.TRUCK_1T);
+        given(shipmentRequestRepository.findById(1L)).willReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> shipmentRequestService.verifyShipperOwnership(1L, 11L))
+                .isInstanceOf(ShipmentAccessDeniedException.class);
+    }
     @Mock ShipmentRequestRepository shipmentRequestRepository;
     @Mock ShipperService shipperService;
     @InjectMocks ShipmentRequestService shipmentRequestService;

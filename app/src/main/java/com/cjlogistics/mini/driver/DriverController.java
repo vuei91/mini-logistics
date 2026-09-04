@@ -2,6 +2,7 @@ package com.cjlogistics.mini.driver;
 
 import com.cjlogistics.mini.driver.dto.DriverCreateRequest;
 import com.cjlogistics.mini.driver.dto.DriverResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/drivers")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "BearerAuth")
 public class DriverController {
 
     private final DriverService driverService;

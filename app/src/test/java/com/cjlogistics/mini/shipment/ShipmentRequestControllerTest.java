@@ -11,6 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
+import com.cjlogistics.mini.security.JwtTokenService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +29,7 @@ class ShipmentRequestControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @MockitoBean ShipmentRequestService shipmentRequestService;
+    @MockitoBean JwtTokenService jwtTokenService;
 
     private ShipmentRequest request() {
         ShipmentRequest request = new ShipmentRequest(1L, "서울", "부산", List.of(

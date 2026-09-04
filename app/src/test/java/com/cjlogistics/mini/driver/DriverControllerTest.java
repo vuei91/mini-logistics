@@ -9,6 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
+import com.cjlogistics.mini.security.JwtTokenService;
 
 import java.util.List;
 
@@ -33,6 +34,7 @@ class DriverControllerTest {
 
     @MockitoBean
     DriverService driverService;
+    @MockitoBean JwtTokenService jwtTokenService;
 
     @Test
     void create_returns_201_with_driver_vehicle_routes() throws Exception {

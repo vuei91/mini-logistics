@@ -10,6 +10,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Locale;
+
 @Entity
 @Table(name = "shippers")
 @Getter
@@ -26,8 +28,21 @@ public class Shipper {
     @Column(nullable = false, length = 20)
     private String phone;
 
+    @Column(unique = true, length = 254)
+    private String email;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
+
     public Shipper(String name, String phone) {
         this.name = name;
         this.phone = phone;
+    }
+
+    public static Shipper register(String name, String phone, String email, String passwordHash) {
+        Shipper shipper = new Shipper(name, phone);
+        shipper.email = email.trim().toLowerCase(Locale.ROOT);
+        shipper.passwordHash = passwordHash;
+        return shipper;
     }
 }

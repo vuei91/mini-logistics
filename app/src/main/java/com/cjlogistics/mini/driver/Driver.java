@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Entity
 @Table(name = "drivers")
@@ -36,6 +37,12 @@ public class Driver {
 
     @Column(nullable = false, length = 20)
     private String phone;
+
+    @Column(unique = true, length = 254)
+    private String email;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -57,6 +64,13 @@ public class Driver {
         this.phone = phone;
         this.status = DriverStatus.AVAILABLE;
         this.vehicle = vehicle;
+    }
+
+    public static Driver register(String name, String phone, String email, String passwordHash, Vehicle vehicle) {
+        Driver driver = new Driver(name, phone, vehicle);
+        driver.email = email.trim().toLowerCase(Locale.ROOT);
+        driver.passwordHash = passwordHash;
+        return driver;
     }
 
     public void addPreferredRoute(PreferredRoute route) {

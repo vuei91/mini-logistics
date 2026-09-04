@@ -2,6 +2,7 @@ package com.cjlogistics.mini.shipper;
 
 import com.cjlogistics.mini.shipper.dto.ShipperCreateRequest;
 import com.cjlogistics.mini.shipper.dto.ShipperResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.net.URI;
 @RestController
 @RequestMapping("/shippers")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "BearerAuth")
 public class ShipperController {
 
     private final ShipperService shipperService;

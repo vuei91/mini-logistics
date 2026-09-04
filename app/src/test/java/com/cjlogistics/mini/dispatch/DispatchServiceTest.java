@@ -22,7 +22,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,6 +66,20 @@ class DispatchServiceTest {
     }
 
     @Test
+    void match_and_dispatch_rejects_a_driver_with_an_active_dispatch() {
+        ShipmentRequest request = request(ShipmentStatus.REQUESTED);
+        Driver driver = driver();
+        given(shipmentRequestService.get(100L)).willReturn(request);
+        given(driverRepository.findByStatus(DriverStatus.AVAILABLE)).willReturn(List.of(driver));
+        given(matchingStrategy.findCandidates(request, List.of(driver))).willReturn(List.of(new MatchCandidate(driver, 130.0)));
+        given(driverRepository.findByIdForUpdate(50L)).willReturn(Optional.of(driver));
+        given(dispatchRepository.existsByDriverIdAndStatusIn(eq(50L), any())).willReturn(true);
+
+        assertThatThrownBy(() -> dispatchService.matchAndDispatch(100L))
+                .isInstanceOf(DriverAlreadyAssignedException.class);
+    }
+
+    @Test
     void accept_and_complete_updates_aggregate_statuses() {
         Dispatch dispatch = new Dispatch(100L, 50L, 130.0);
         ReflectionTestUtils.setField(dispatch, "id", 1L);
@@ -80,5 +96,15 @@ class DispatchServiceTest {
         assertThat(dispatch.getStatus()).isEqualTo(DispatchStatus.COMPLETED);
         assertThat(shipment.getStatus()).isEqualTo(ShipmentStatus.COMPLETED);
         assertThat(driver.getStatus()).isEqualTo(DriverStatus.AVAILABLE);
+    }
+
+    @Test
+    void verify_driver_ownership_rejects_a_different_driver() {
+        Dispatch dispatch = new Dispatch(100L, 50L, 130.0);
+        ReflectionTestUtils.setField(dispatch, "id", 1L);
+        given(dispatchRepository.findById(1L)).willReturn(Optional.of(dispatch));
+
+        assertThatThrownBy(() -> dispatchService.verifyDriverOwnership(1L, 51L))
+                .isInstanceOf(DispatchAccessDeniedException.class);
     }
 }

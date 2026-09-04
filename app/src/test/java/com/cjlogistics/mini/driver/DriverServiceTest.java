@@ -13,9 +13,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class DriverServiceTest {
+
+    @Test
+    void register_normalizes_login_email_and_keeps_only_password_hash() {
+        Driver driver = Driver.register(
+                "김운전", "010-3333-4444", "DRIVER@Example.COM", "bcrypt-hash",
+                new Vehicle(VehicleType.TRUCK_1T, 1000));
+
+        assertThat(driver.getEmail()).isEqualTo("driver@example.com");
+        assertThat(driver.getPasswordHash()).isEqualTo("bcrypt-hash");
+    }
 
     @Mock
     DriverRepository driverRepository;
@@ -42,6 +54,32 @@ class DriverServiceTest {
         assertThat(result.getPreferredRoutes()).hasSize(1);
         assertThat(result.getPreferredRoutes().get(0).getOriginRegion()).isEqualTo("서울");
         assertThat(result.getPreferredRoutes().get(0).getDestinationRegion()).isEqualTo("부산");
+    }
+
+    @Test
+    void signup_hashes_the_password_before_persisting() {
+        DriverService service = new DriverService(driverRepository, new BCryptPasswordEncoder());
+        given(driverRepository.save(any(Driver.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Driver result = service.signup(
+                "김운전", "010-3333-4444", "driver@example.com", "plain-password",
+                VehicleType.TRUCK_1T, 1000, List.of());
+
+        assertThat(result.getPasswordHash()).isNotEqualTo("plain-password");
+        assertThat(new BCryptPasswordEncoder().matches("plain-password", result.getPasswordHash())).isTrue();
+    }
+
+    @Test
+    void signup_rejects_an_already_registered_email() {
+        DriverService service = new DriverService(driverRepository, new BCryptPasswordEncoder());
+        given(driverRepository.existsByEmail("driver@example.com")).willReturn(true);
+
+        assertThatThrownBy(() -> service.signup(
+                "김운전", "010-3333-4444", "DRIVER@Example.COM", "plain-password",
+                VehicleType.TRUCK_1T, 1000, List.of()))
+                .isInstanceOf(DuplicateDriverEmailException.class);
+
+        verify(driverRepository).existsByEmail("driver@example.com");
     }
 
     @Test

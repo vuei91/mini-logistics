@@ -44,3 +44,9 @@ logging:
   level:
     com.cjlogistics.mini: DEBUG
     org.hibernate.SQL: DEBUG
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:change-this-development-secret-key-to-at-least-32-bytes}
+      expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}

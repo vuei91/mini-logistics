@@ -8,6 +8,11 @@ import com.cjlogistics.mini.driver.DriverNotFoundException;
 import com.cjlogistics.mini.shipment.InvalidShipmentStatusTransitionException;
 import com.cjlogistics.mini.shipment.ShipmentRequestNotFoundException;
 import com.cjlogistics.mini.shipper.ShipperNotFoundException;
+import com.cjlogistics.mini.shipper.DuplicateShipperEmailException;
+import com.cjlogistics.mini.driver.DuplicateDriverEmailException;
+import com.cjlogistics.mini.auth.InvalidCredentialsException;
+import com.cjlogistics.mini.dispatch.DispatchAccessDeniedException;
+import com.cjlogistics.mini.shipment.ShipmentAccessDeniedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,10 +38,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             InvalidShipmentStatusTransitionException.class,
             InvalidDispatchStatusTransitionException.class,
-            NoMatchingDriverException.class
+            NoMatchingDriverException.class,
+            DuplicateShipperEmailException.class,
+            DuplicateDriverEmailException.class
     })
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException e, HttpServletRequest req) {
         return build(HttpStatus.CONFLICT, e.getMessage(), req);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorized(InvalidCredentialsException e, HttpServletRequest req) {
+        return build(HttpStatus.UNAUTHORIZED, e.getMessage(), req);
+    }
+
+    @ExceptionHandler({DispatchAccessDeniedException.class, ShipmentAccessDeniedException.class})
+    public ResponseEntity<ErrorResponse> handleForbidden(RuntimeException e, HttpServletRequest req) {
+        return build(HttpStatus.FORBIDDEN, e.getMessage(), req);
     }
 
     @ExceptionHandler(IllegalStatusTargetException.class)
