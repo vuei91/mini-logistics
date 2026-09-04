@@ -1,0 +1,15 @@
+spring:
+  config:
+    activate:
+      on-profile: rabbitmq
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+app:
+  messaging:
+    enabled: true
+    outbox:
+      fixed-delay-ms: 1000
