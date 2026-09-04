@@ -15,12 +15,10 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import com.cjlogistics.mini.security.AuthenticatedMember;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequiredArgsConstructor
-@SecurityRequirement(name = "BearerAuth")
 public class DispatchController {
 
     private final DispatchService dispatchService;

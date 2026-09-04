@@ -32,21 +32,26 @@ class OpenApiSmokeTest {
         assertThat(response.getBody()).contains("/dispatches");
         // 프로젝트 메타데이터 노출
         assertThat(response.getBody()).contains("CJ Logistics Mini API");
-        assertThat(response.getBody()).contains("BearerAuth");
-        assertThat(response.getBody()).contains("bearer");
         assertThat(response.getBody()).contains("/auth/shippers/signup");
         assertThat(response.getBody()).contains("/auth/drivers/signup");
         assertThat(response.getBody()).contains("/auth/shippers/login");
         assertThat(response.getBody()).contains("/auth/drivers/login");
         JsonNode openApi = new ObjectMapper().readTree(response.getBody());
-        // 로그인/회원가입은 공개 API이고, 업무 API는 각 operation에 JWT 요구사항을 명시한다.
-        assertThat(openApi.path("security").isMissingNode()).isTrue();
+        // 로그인/회원가입은 공개 API이고, 업무 API는 bearerAuth를 사용한다.
+        assertThat(openApi.path("components").path("securitySchemes").path("bearerAuth")
+            .path("type").asText()).isEqualTo("http");
+        assertThat(openApi.path("components").path("securitySchemes").path("bearerAuth")
+            .path("scheme").asText()).isEqualTo("bearer");
         assertThat(openApi.path("paths").path("/shipment-requests").path("post")
-                .path("security").get(0).has("BearerAuth")).isTrue();
+            .path("parameters").isMissingNode()).isTrue();
         assertThat(openApi.path("paths").path("/shipment-requests").path("post")
-                .path("parameters").toString()).contains("\"name\":\"Authorization\"");
+            .path("security").toString()).contains("bearerAuth");
         assertThat(openApi.path("paths").path("/auth/shippers/login").path("post")
                 .path("security").isMissingNode()).isTrue();
+        assertThat(openApi.path("paths").path("/auth/shippers/login").path("post")
+                .path("parameters").isMissingNode()).isTrue();
+        assertThat(openApi.path("paths").path("/shippers").path("post").isMissingNode()).isTrue();
+        assertThat(openApi.path("paths").path("/drivers").path("post").isMissingNode()).isTrue();
     }
 
     @Test
