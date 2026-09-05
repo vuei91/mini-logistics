@@ -48,6 +48,15 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void driver_token_cannot_start_dispatch_matching() throws Exception {
+        String token = jwtTokenService.create("driver@example.com", "DRIVER", 1L);
+
+        mockMvc.perform(post("/shipment-requests/1/dispatch")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shipper_token_cannot_accept_dispatch() throws Exception {
         String token = jwtTokenService.create("cj@example.com", "SHIPPER", 1L);
         mockMvc.perform(post("/dispatches/1/accept").header("Authorization", "Bearer " + token))

@@ -38,14 +38,20 @@ class OpenApiSmokeTest {
         assertThat(response.getBody()).contains("/auth/drivers/login");
         JsonNode openApi = new ObjectMapper().readTree(response.getBody());
         // 로그인/회원가입은 공개 API이고, 업무 API는 bearerAuth를 사용한다.
-        assertThat(openApi.path("components").path("securitySchemes").path("bearerAuth")
+        assertThat(openApi.path("components").path("securitySchemes").path("shipperAuth")
             .path("type").asText()).isEqualTo("http");
-        assertThat(openApi.path("components").path("securitySchemes").path("bearerAuth")
+        assertThat(openApi.path("components").path("securitySchemes").path("driverAuth")
             .path("scheme").asText()).isEqualTo("bearer");
         assertThat(openApi.path("paths").path("/shipment-requests").path("post")
             .path("parameters").isMissingNode()).isTrue();
         assertThat(openApi.path("paths").path("/shipment-requests").path("post")
-            .path("security").toString()).contains("bearerAuth");
+            .path("security").toString()).contains("shipperAuth");
+        JsonNode dispatchSecurity = openApi.path("paths")
+            .path("/shipment-requests/{shipmentRequestId}/dispatch").path("post").path("security");
+        assertThat(dispatchSecurity.toString()).contains("shipperAuth");
+        assertThat(dispatchSecurity.toString()).doesNotContain("driverAuth");
+        assertThat(openApi.path("paths").path("/dispatches/{id}/accept").path("post")
+            .path("security").toString()).contains("driverAuth");
         assertThat(openApi.path("paths").path("/auth/shippers/login").path("post")
                 .path("security").isMissingNode()).isTrue();
         assertThat(openApi.path("paths").path("/auth/shippers/login").path("post")

@@ -19,6 +19,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth.requestMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/shipment-requests").hasRole("SHIPPER")
                         .requestMatchers(HttpMethod.POST, "/shipment-requests/*/cancel").hasRole("SHIPPER")
+                        .requestMatchers(HttpMethod.POST, "/shipment-requests/*/dispatch").hasRole("SHIPPER")
                         .requestMatchers(HttpMethod.POST, "/dispatches/*/accept", "/dispatches/*/reject").hasRole("DRIVER")
                         .requestMatchers(HttpMethod.PATCH, "/dispatches/*/status").hasRole("DRIVER")
                         .anyRequest().authenticated())
