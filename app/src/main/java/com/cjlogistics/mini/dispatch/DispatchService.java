@@ -56,6 +56,10 @@ public class DispatchService {
                 .orElseThrow(() -> new DispatchNotFoundException(id));
     }
 
+    public List<Dispatch> getByDriver(Long driverId) {
+        return dispatchRepository.findByDriverIdOrderByCreatedAtDesc(driverId);
+    }
+
     public void verifyDriverOwnership(Long dispatchId, Long driverId) {
         if (!get(dispatchId).getDriverId().equals(driverId)) throw new DispatchAccessDeniedException(dispatchId);
     }

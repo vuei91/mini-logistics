@@ -14,6 +14,7 @@ public class ShipmentRequestService {
   return shipmentRequestRepository.save(new ShipmentRequest(shipperId,origin,destination,cargoItems.stream().map(c -> new CargoItem(c.description(),c.weightKg())).toList(),vehicleType));
  }
  public ShipmentRequest get(Long id) { return shipmentRequestRepository.findById(id).orElseThrow(() -> new ShipmentRequestNotFoundException(id)); }
+ public List<ShipmentRequest> getByShipper(Long shipperId) { return shipmentRequestRepository.findByShipperIdOrderByCreatedAtDesc(shipperId); }
  public void verifyShipperOwnership(Long shipmentRequestId, Long shipperId) { if (!get(shipmentRequestId).getShipperId().equals(shipperId)) throw new ShipmentAccessDeniedException(shipmentRequestId); }
  @Transactional public ShipmentRequest cancel(Long id) { ShipmentRequest request=get(id); request.cancel(); return request; }
 }

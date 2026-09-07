@@ -33,6 +33,11 @@ public class DispatchController {
         return ResponseEntity.created(location).body(DispatchResponse.from(dispatch));
     }
 
+    @GetMapping("/dispatches")
+    public java.util.List<DispatchResponse> listMine(@AuthenticationPrincipal AuthenticatedMember member) {
+        return dispatchService.getByDriver(member.profileId()).stream().map(DispatchResponse::from).toList();
+    }
+
     @GetMapping("/dispatches/{id}")
     public DispatchResponse get(@PathVariable Long id) {
         return DispatchResponse.from(dispatchService.get(id));
@@ -40,6 +45,9 @@ public class DispatchController {
 
     @PostMapping("/dispatches/{id}/accept")
     public DispatchResponse accept(@PathVariable Long id, @AuthenticationPrincipal AuthenticatedMember member) {
+        System.out.println("DEBUG_MEMBER_CLASS=" + (member == null ? "NULL" : member.getClass() + " value=" + member));
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        System.out.println("DEBUG_AUTH=" + auth + " principalClass=" + (auth == null ? "NULL" : auth.getPrincipal().getClass()));
         dispatchService.verifyDriverOwnership(id, member.profileId());
         return DispatchResponse.from(dispatchService.accept(id));
     }
