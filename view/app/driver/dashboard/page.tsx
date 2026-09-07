@@ -66,10 +66,20 @@ function DriverDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-zinc-900">내 배차</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        제안된 배차를 확인하고 운송 상태를 관리하세요.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900">내 배차</h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            제안된 배차를 확인하고 운송 상태를 관리하세요.
+          </p>
+        </div>
+        <Link
+          href="/driver/profile"
+          className="flex h-10 shrink-0 items-center rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+        >
+          내 프로필
+        </Link>
+      </div>
 
       <div className="mt-6 space-y-8">
         <ErrorAlert message={error} />

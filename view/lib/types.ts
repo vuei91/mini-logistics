@@ -59,6 +59,13 @@ export interface DriverSignupRequest {
   preferredRoutes?: RouteData[];
 }
 
+export interface DriverUpdateRequest {
+  name: string;
+  phone: string;
+  vehicle: VehicleData;
+  preferredRoutes?: RouteData[];
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -85,6 +92,11 @@ export interface JwtPayload {
 
 export interface ShipperResponse {
   id: number;
+  name: string;
+  phone: string;
+}
+
+export interface ShipperUpdateRequest {
   name: string;
   phone: string;
 }
@@ -130,6 +142,8 @@ export interface ShipmentRequestResponse {
   totalCargoWeightKg: number;
   requiredVehicleType: VehicleType;
   status: ShipmentStatus;
+  /** 예상 운임 */
+  estimatedFare: number | null;
   createdAt: string; // ISO LocalDateTime
 }
 
@@ -142,7 +156,7 @@ export interface DispatchResponse {
   shipmentRequestId: number;
   driverId: number;
   matchScore: number;
-  fare: number;
+  fare: number | null;
   status: DispatchStatus;
   /** 연결된 화물요청의 운송 상태 (기사 상세 스텝퍼용) */
   shipmentStatus: ShipmentStatus | null;
@@ -151,6 +165,18 @@ export interface DispatchResponse {
 
 export interface DispatchStatusUpdateRequest {
   status: ShipmentStatus;
+}
+
+/** 매칭 후보 기사 (배차 생성 전 조회 결과) */
+export interface MatchCandidateResponse {
+  driverId: number;
+  name: string;
+  status: DriverStatus;
+  vehicle: { vehicleType: VehicleType; capacityKg: number };
+  preferredRoutes: RouteData[];
+  matchScore: number;
+  /** 예상 운임 (화물 요청 기준, 후보 공통) */
+  estimatedFare: number | null;
 }
 
 /* ------------------------------------------------------------------ */

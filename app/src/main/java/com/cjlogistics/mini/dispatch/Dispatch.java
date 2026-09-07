@@ -54,9 +54,14 @@ public class Dispatch {
     private LocalDateTime createdAt;
 
     public Dispatch(Long shipmentRequestId, Long driverId, double matchScore) {
+        this(shipmentRequestId, driverId, matchScore, null);
+    }
+
+    public Dispatch(Long shipmentRequestId, Long driverId, double matchScore, BigDecimal fare) {
         this.shipmentRequestId = shipmentRequestId;
         this.driverId = driverId;
         this.matchScore = matchScore;
+        this.fare = fare;
         this.status = DispatchStatus.PROPOSED;
     }
 

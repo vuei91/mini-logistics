@@ -1,7 +1,9 @@
 package com.cjlogistics.mini.dispatch;
 
+import com.cjlogistics.mini.dispatch.dto.DispatchCreateRequest;
 import com.cjlogistics.mini.dispatch.dto.DispatchResponse;
 import com.cjlogistics.mini.dispatch.dto.DispatchStatusUpdateRequest;
+import com.cjlogistics.mini.dispatch.dto.MatchCandidateResponse;
 import com.cjlogistics.mini.shipment.ShipmentRequestService;
 import com.cjlogistics.mini.shipment.ShipmentStatus;
 import jakarta.validation.Valid;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 import com.cjlogistics.mini.security.AuthenticatedMember;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
@@ -26,9 +29,27 @@ public class DispatchController {
     private final DispatchService dispatchService;
     private final ShipmentRequestService shipmentRequestService;
 
+    @GetMapping("/shipment-requests/{shipmentRequestId}/match-candidates")
+    public List<MatchCandidateResponse> matchCandidates(
+            @PathVariable Long shipmentRequestId,
+            @AuthenticationPrincipal AuthenticatedMember member
+    ) {
+        shipmentRequestService.verifyShipperOwnership(shipmentRequestId, member.profileId());
+        java.math.BigDecimal estimatedFare = dispatchService.estimateFare(shipmentRequestId);
+        return dispatchService.findCandidates(shipmentRequestId).stream()
+                .map(c -> MatchCandidateResponse.from(c, estimatedFare))
+                .toList();
+    }
+
     @PostMapping("/shipment-requests/{shipmentRequestId}/dispatch")
-    public ResponseEntity<DispatchResponse> matchAndDispatch(@PathVariable Long shipmentRequestId) {
-        Dispatch dispatch = dispatchService.matchAndDispatch(shipmentRequestId);
+    public ResponseEntity<DispatchResponse> matchAndDispatch(
+            @PathVariable Long shipmentRequestId,
+            @RequestBody(required = false) DispatchCreateRequest request,
+            @AuthenticationPrincipal AuthenticatedMember member
+    ) {
+        shipmentRequestService.verifyShipperOwnership(shipmentRequestId, member.profileId());
+        Long targetDriverId = request == null ? null : request.driverId();
+        Dispatch dispatch = dispatchService.matchAndDispatch(shipmentRequestId, targetDriverId);
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/dispatches/{id}")
                 .buildAndExpand(dispatch.getId())

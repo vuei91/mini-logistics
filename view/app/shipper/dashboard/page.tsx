@@ -12,6 +12,7 @@ import { shipmentApi } from "@/lib/endpoints";
 import {
   VEHICLE_TYPE_LABELS,
   formatDateTime,
+  formatFare,
   formatWeight,
 } from "@/lib/labels";
 import type { ShipmentRequestResponse } from "@/lib/types";
@@ -43,12 +44,20 @@ function ShipperDashboard() {
             생성한 화물 요청과 진행 상태를 확인하세요.
           </p>
         </div>
-        <Link
-          href="/shipper/requests/new"
-          className="flex h-10 items-center rounded-lg bg-[var(--cj-red)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--cj-red-dark)]"
-        >
-          + 새 화물 요청
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/shipper/profile"
+            className="flex h-10 items-center rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            내 프로필
+          </Link>
+          <Link
+            href="/shipper/requests/new"
+            className="flex h-10 items-center rounded-lg bg-[var(--cj-red)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--cj-red-dark)]"
+          >
+            + 새 화물 요청
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6">
@@ -87,6 +96,14 @@ function ShipperDashboard() {
                         {formatWeight(req.totalCargoWeightKg)} ·{" "}
                         화물 {req.cargoItems.length}건
                       </p>
+                      {req.estimatedFare != null ? (
+                        <p className="mt-1 text-sm text-zinc-600">
+                          예상 운임{" "}
+                          <span className="font-semibold text-zinc-900">
+                            {formatFare(req.estimatedFare)}
+                          </span>
+                        </p>
+                      ) : null}
                     </div>
                     <ShipmentStatusBadge status={req.status} />
                   </div>

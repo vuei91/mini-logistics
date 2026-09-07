@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,9 +29,31 @@ public class DispatchService {
     private final DispatchRepository dispatchRepository;
     private final MatchingStrategy matchingStrategy;
     private final OutboxEventStore outboxEventStore;
+    private final FareCalculator fareCalculator;
 
+    /**
+     * 매칭 후보 기사 목록을 조회한다. (상태 변경 없음, 읽기 전용)
+     */
+    public List<MatchCandidate> findCandidates(Long shipmentRequestId) {
+        ShipmentRequest request = shipmentRequestService.get(shipmentRequestId);
+        List<Driver> availableDrivers = driverRepository.findByStatus(DriverStatus.AVAILABLE);
+        return matchingStrategy.findCandidates(request, availableDrivers);
+    }
+
+    /**
+     * 최적 후보(1등)를 자동 선택해 배차한다. (하위 호환용)
+     */
     @Transactional
     public Dispatch matchAndDispatch(Long shipmentRequestId) {
+        return matchAndDispatch(shipmentRequestId, null);
+    }
+
+    /**
+     * 배차를 생성한다.
+     * @param targetDriverId 화주가 지정한 기사 ID. null 이면 최적 후보(1등)를 자동 선택.
+     */
+    @Transactional
+    public Dispatch matchAndDispatch(Long shipmentRequestId, Long targetDriverId) {
         ShipmentRequest request = shipmentRequestService.get(shipmentRequestId);
 
         List<Driver> availableDrivers = driverRepository.findByStatus(DriverStatus.AVAILABLE);
@@ -40,15 +63,32 @@ public class DispatchService {
             throw new NoMatchingDriverException(shipmentRequestId);
         }
 
+        // 지정 기사가 있으면 후보 목록에서 선택, 없으면 1등 자동 선택
+        MatchCandidate chosen;
+        if (targetDriverId != null) {
+            chosen = candidates.stream()
+                    .filter(c -> c.driver().getId().equals(targetDriverId))
+                    .findFirst()
+                    .orElseThrow(() -> new NoMatchingDriverException(shipmentRequestId));
+        } else {
+            chosen = candidates.get(0);
+        }
+
         request.startMatching();
 
-        MatchCandidate best = candidates.get(0);
-        Driver lockedDriver = driverRepository.findByIdForUpdate(best.driver().getId()).orElseThrow(() -> new NoMatchingDriverException(shipmentRequestId));
+        Driver lockedDriver = driverRepository.findByIdForUpdate(chosen.driver().getId())
+                .orElseThrow(() -> new NoMatchingDriverException(shipmentRequestId));
         if (lockedDriver.getStatus() != DriverStatus.AVAILABLE || dispatchRepository.existsByDriverIdAndStatusIn(lockedDriver.getId(), List.of(DispatchStatus.PROPOSED, DispatchStatus.ACCEPTED))) {
             throw new DriverAlreadyAssignedException(lockedDriver.getId());
         }
-        Dispatch dispatch = new Dispatch(request.getId(), best.driver().getId(), best.score());
+        BigDecimal fare = fareCalculator.calculate(request);
+        Dispatch dispatch = new Dispatch(request.getId(), chosen.driver().getId(), chosen.score(), fare);
         return dispatchRepository.save(dispatch);
+    }
+
+    /** 화물 요청의 예상 운임 (후보 조회 시 노출용) */
+    public BigDecimal estimateFare(Long shipmentRequestId) {
+        return fareCalculator.calculate(shipmentRequestService.get(shipmentRequestId));
     }
 
     public Dispatch get(Long id) {

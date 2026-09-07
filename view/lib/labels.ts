@@ -66,7 +66,8 @@ export function formatDateTime(iso: string): string {
   });
 }
 
-export function formatFare(fare: number): string {
+export function formatFare(fare: number | null | undefined): string {
+  if (fare == null) return "산정 전";
   return `${Math.round(fare).toLocaleString("ko-KR")}원`;
 }
 
