@@ -8,7 +8,6 @@ import com.cjlogistics.mini.driver.Vehicle;
 import com.cjlogistics.mini.driver.VehicleType;
 import com.cjlogistics.mini.security.JwtTokenService;
 import com.cjlogistics.mini.shipper.DuplicateShipperEmailException;
-import com.cjlogistics.mini.auth.InvalidCredentialsException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
