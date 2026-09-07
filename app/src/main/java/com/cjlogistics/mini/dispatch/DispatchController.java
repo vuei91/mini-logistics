@@ -45,9 +45,6 @@ public class DispatchController {
 
     @PostMapping("/dispatches/{id}/accept")
     public DispatchResponse accept(@PathVariable Long id, @AuthenticationPrincipal AuthenticatedMember member) {
-        System.out.println("DEBUG_MEMBER_CLASS=" + (member == null ? "NULL" : member.getClass() + " value=" + member));
-        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        System.out.println("DEBUG_AUTH=" + auth + " principalClass=" + (auth == null ? "NULL" : auth.getPrincipal().getClass()));
         dispatchService.verifyDriverOwnership(id, member.profileId());
         return DispatchResponse.from(dispatchService.accept(id));
     }

@@ -57,6 +57,8 @@ class DispatchServiceTest {
         given(shipmentRequestService.get(100L)).willReturn(request);
         given(driverRepository.findByStatus(DriverStatus.AVAILABLE)).willReturn(List.of(driver));
         given(matchingStrategy.findCandidates(request, List.of(driver))).willReturn(List.of(new MatchCandidate(driver, 130.0)));
+        given(driverRepository.findByIdForUpdate(50L)).willReturn(Optional.of(driver));
+        given(dispatchRepository.existsByDriverIdAndStatusIn(eq(50L), any())).willReturn(false);
         given(dispatchRepository.save(any(Dispatch.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         Dispatch result = dispatchService.matchAndDispatch(100L);
