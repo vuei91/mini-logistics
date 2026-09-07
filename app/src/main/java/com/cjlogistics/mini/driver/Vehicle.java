@@ -33,4 +33,9 @@ public class Vehicle {
         this.vehicleType = vehicleType;
         this.capacityKg = capacityKg;
     }
+
+    public void update(VehicleType vehicleType, Integer capacityKg) {
+        this.vehicleType = vehicleType;
+        this.capacityKg = capacityKg;
+    }
 }

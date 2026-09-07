@@ -40,4 +40,11 @@ public class ShipperService {
         return shipperRepository.findById(id)
                 .orElseThrow(() -> new ShipperNotFoundException(id));
     }
+
+    @Transactional
+    public Shipper updateProfile(Long id, String name, String phone) {
+        Shipper shipper = get(id);
+        shipper.updateProfile(name, phone);
+        return shipper;
+    }
 }

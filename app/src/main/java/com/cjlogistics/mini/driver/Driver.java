@@ -80,4 +80,16 @@ public class Driver {
     public void updateStatus(DriverStatus status) {
         this.status = status;
     }
+
+    public void updateProfile(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    public void replacePreferredRoutes(List<PreferredRoute> routes) {
+        this.preferredRoutes.clear();
+        if (routes != null) {
+            this.preferredRoutes.addAll(routes);
+        }
+    }
 }

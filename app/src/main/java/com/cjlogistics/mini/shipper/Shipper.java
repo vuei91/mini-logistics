@@ -45,4 +45,9 @@ public class Shipper {
         shipper.passwordHash = passwordHash;
         return shipper;
     }
+
+    public void updateProfile(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
 }

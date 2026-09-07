@@ -47,6 +47,16 @@ export function Header() {
               >
                 대시보드
               </Link>
+              <Link
+                href={
+                  user.role === "SHIPPER"
+                    ? "/shipper/profile"
+                    : "/driver/profile"
+                }
+                className="rounded-md px-2 py-1.5 text-zinc-600 hover:text-zinc-900"
+              >
+                내 프로필
+              </Link>
               <button
                 type="button"
                 onClick={handleLogout}

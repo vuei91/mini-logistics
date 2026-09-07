@@ -62,4 +62,20 @@ public class DriverService {
         return driverRepository.findById(id)
                 .orElseThrow(() -> new DriverNotFoundException(id));
     }
+
+    @Transactional
+    public Driver updateProfile(
+            Long id,
+            String name,
+            String phone,
+            VehicleType vehicleType,
+            Integer capacityKg,
+            List<PreferredRoute> preferredRoutes
+    ) {
+        Driver driver = get(id);
+        driver.updateProfile(name, phone);
+        driver.getVehicle().update(vehicleType, capacityKg);
+        driver.replacePreferredRoutes(preferredRoutes);
+        return driver;
+    }
 }
