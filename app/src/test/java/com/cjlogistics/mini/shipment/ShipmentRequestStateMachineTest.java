@@ -2,12 +2,10 @@ package com.cjlogistics.mini.shipment;
 
 import com.cjlogistics.mini.driver.VehicleType;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ShipmentRequestStateMachineTest {
     private ShipmentRequest newRequest() {
