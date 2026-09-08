@@ -18,6 +18,12 @@ repositories {
 	mavenCentral()
 }
 
+dependencyManagement {
+	imports {
+		mavenBom "org.testcontainers:testcontainers-bom:1.20.6"
+	}
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 	implementation 'org.springframework.boot:spring-boot-h2console'
@@ -38,6 +44,12 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'org.springframework.amqp:spring-rabbit-test'
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.testcontainers:rabbitmq'
+	testImplementation 'org.awaitility:awaitility'
+	testImplementation 'org.assertj:assertj-core'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
@@ -45,4 +57,9 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// Docker Engine 29+ 는 최소 API 버전 1.44 를 요구한다. Testcontainers 가 사용하는
+	// docker-java 클라이언트는 기본으로 1.32 를 협상해 HTTP 400 으로 거부당한다.
+	// api.version 을 고정해 호환성을 확보한다.
+	// 참고: https://github.com/testcontainers/testcontainers-java/issues/11235
+	systemProperty 'api.version', '1.44'
 }
