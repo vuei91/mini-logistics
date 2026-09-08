@@ -19,6 +19,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const handleRoleChange = (next: Role) => {
+    if (next === role) return;
+    setRole(next);
+    setEmail("");
+    setPassword("");
+    setError(null);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -52,7 +60,7 @@ export default function LoginPage() {
         계정 유형을 선택하고 로그인하세요.
       </p>
 
-      <RoleTabs role={role} onChange={setRole} />
+      <RoleTabs role={role} onChange={handleRoleChange} />
 
       <form
         onSubmit={handleSubmit}

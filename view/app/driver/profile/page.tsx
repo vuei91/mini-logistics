@@ -13,6 +13,7 @@ import {
   VEHICLE_TYPE_LABELS,
   formatWeight,
 } from "@/lib/labels";
+import { formatPhone } from "@/lib/phone";
 import type { DriverResponse, RouteData, VehicleType } from "@/lib/types";
 import { Field } from "../../login/page";
 
@@ -205,10 +206,12 @@ function ProfileEditForm({
       <Field label="전화번호">
         <input
           required
-          maxLength={20}
+          type="tel"
+          inputMode="numeric"
+          maxLength={13}
           className="input"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(formatPhone(e.target.value))}
         />
       </Field>
 

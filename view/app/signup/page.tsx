@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { authApi } from "@/lib/endpoints";
 import { VEHICLE_TYPES, VEHICLE_TYPE_LABELS } from "@/lib/labels";
+import { formatPhone } from "@/lib/phone";
 import type { Role, VehicleType } from "@/lib/types";
 import { Field, RoleTabs } from "../login/page";
 
@@ -27,6 +28,18 @@ export default function SignupPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleRoleChange = (next: Role) => {
+    if (next === role) return;
+    setRole(next);
+    setName("");
+    setPhone("");
+    setEmail("");
+    setPassword("");
+    setVehicleType("TRUCK_1T");
+    setCapacityKg("1000");
+    setError(null);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -77,7 +90,7 @@ export default function SignupPage() {
         계정 유형을 선택해 가입하세요. 가입 후 자동으로 로그인됩니다.
       </p>
 
-      <RoleTabs role={role} onChange={setRole} />
+      <RoleTabs role={role} onChange={handleRoleChange} />
 
       <form
         onSubmit={handleSubmit}
@@ -96,11 +109,13 @@ export default function SignupPage() {
         <Field label="전화번호">
           <input
             required
+            type="tel"
+            inputMode="numeric"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
             className="input"
             placeholder="010-1234-5678"
-            maxLength={20}
+            maxLength={13}
           />
         </Field>
         <Field label="이메일">

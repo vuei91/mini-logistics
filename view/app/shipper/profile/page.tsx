@@ -8,6 +8,7 @@ import { Spinner } from "@/components/Spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import { shipperApi } from "@/lib/endpoints";
+import { formatPhone } from "@/lib/phone";
 import type { ShipperResponse } from "@/lib/types";
 import { Field } from "../../login/page";
 
@@ -141,10 +142,12 @@ function ProfileEditForm({
       <Field label="전화번호">
         <input
           required
-          maxLength={20}
+          type="tel"
+          inputMode="numeric"
+          maxLength={13}
           className="input"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(formatPhone(e.target.value))}
         />
       </Field>
 
