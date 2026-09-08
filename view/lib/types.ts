@@ -180,6 +180,30 @@ export interface MatchCandidateResponse {
 }
 
 /* ------------------------------------------------------------------ */
+/* 알림                                                                 */
+/* ------------------------------------------------------------------ */
+
+export type NotificationType =
+  | "DISPATCH_REQUESTED"
+  | "DISPATCH_ACCEPTED"
+  | "DISPATCH_REJECTED"
+  | "STATUS_CHANGED";
+
+export interface NotificationResponse {
+  id: number;
+  type: NotificationType;
+  title: string;
+  message: string;
+  relatedDispatchId: number | null;
+  read: boolean;
+  createdAt: string; // ISO LocalDateTime
+}
+
+export interface UnreadCountResponse {
+  unreadCount: number;
+}
+
+/* ------------------------------------------------------------------ */
 /* 에러                                                                 */
 /* ------------------------------------------------------------------ */
 

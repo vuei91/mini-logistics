@@ -7,6 +7,9 @@ import com.cjlogistics.mini.driver.Driver;
 import com.cjlogistics.mini.driver.DriverRepository;
 import com.cjlogistics.mini.driver.DriverService;
 import com.cjlogistics.mini.driver.DriverStatus;
+import com.cjlogistics.mini.notification.NotificationService;
+import com.cjlogistics.mini.notification.NotificationType;
+import com.cjlogistics.mini.notification.RecipientType;
 import com.cjlogistics.mini.shipment.ShipmentRequest;
 import com.cjlogistics.mini.shipment.ShipmentRequestService;
 import com.cjlogistics.mini.shipment.ShipmentStatus;
@@ -30,6 +33,7 @@ public class DispatchService {
     private final MatchingStrategy matchingStrategy;
     private final OutboxEventStore outboxEventStore;
     private final FareCalculator fareCalculator;
+    private final NotificationService notificationService;
 
     /**
      * 매칭 후보 기사 목록을 조회한다. (상태 변경 없음, 읽기 전용)
@@ -83,7 +87,24 @@ public class DispatchService {
         }
         BigDecimal fare = fareCalculator.calculate(request);
         Dispatch dispatch = new Dispatch(request.getId(), chosen.driver().getId(), chosen.score(), fare);
-        return dispatchRepository.save(dispatch);
+        dispatch = dispatchRepository.save(dispatch);
+
+        String route = request.getOriginRegion() + " → " + request.getDestinationRegion();
+        // 요청: 기사에게 배차 제안 알림
+        notificationService.notify(
+                RecipientType.DRIVER, dispatch.getDriverId(),
+                NotificationType.DISPATCH_REQUESTED,
+                "새 배차 요청",
+                route + " 배차 요청이 도착했습니다.",
+                dispatch.getId());
+        // 요청: 화주에게 배차 진행 알림
+        notificationService.notify(
+                RecipientType.SHIPPER, request.getShipperId(),
+                NotificationType.DISPATCH_REQUESTED,
+                "배차 요청 접수",
+                route + " 화물의 기사 배차를 요청했습니다.",
+                dispatch.getId());
+        return dispatch;
     }
 
     /** 화물 요청의 예상 운임 (후보 조회 시 노출용) */
@@ -117,6 +138,22 @@ public class DispatchService {
         outboxEventStore.store(new DispatchConfirmedEvent(
                 dispatch.getId(), request.getId(), driver.getId(), LocalDateTime.now()));
 
+        String route = request.getOriginRegion() + " → " + request.getDestinationRegion();
+        // 승낙: 화주에게 배차 수락 알림
+        notificationService.notify(
+                RecipientType.SHIPPER, request.getShipperId(),
+                NotificationType.DISPATCH_ACCEPTED,
+                "배차 수락됨",
+                driver.getName() + " 기사가 " + route + " 배차를 수락했습니다.",
+                dispatch.getId());
+        // 승낙: 기사 본인에게도 확정 알림
+        notificationService.notify(
+                RecipientType.DRIVER, driver.getId(),
+                NotificationType.DISPATCH_ACCEPTED,
+                "배차 확정",
+                route + " 배차를 수락했습니다.",
+                dispatch.getId());
+
         return dispatch;
     }
 
@@ -124,6 +161,17 @@ public class DispatchService {
     public Dispatch reject(Long dispatchId) {
         Dispatch dispatch = get(dispatchId);
         dispatch.reject();
+
+        ShipmentRequest request = shipmentRequestService.get(dispatch.getShipmentRequestId());
+        Driver driver = driverService.get(dispatch.getDriverId());
+        String route = request.getOriginRegion() + " → " + request.getDestinationRegion();
+        // 승낙(거절): 화주에게 배차 거절 알림
+        notificationService.notify(
+                RecipientType.SHIPPER, request.getShipperId(),
+                NotificationType.DISPATCH_REJECTED,
+                "배차 거절됨",
+                driver.getName() + " 기사가 " + route + " 배차를 거절했습니다.",
+                dispatch.getId());
         return dispatch;
     }
 
@@ -149,6 +197,29 @@ public class DispatchService {
             }
             default -> throw new IllegalStatusTargetException(target);
         }
+
+        // 상태 변경: 화주에게만 알림 (상태 변경은 기사 본인이 수행한 행동이므로 기사에게는 알리지 않음)
+        String route = request.getOriginRegion() + " → " + request.getDestinationRegion();
+        String statusLabel = statusLabel(target);
+        notificationService.notify(
+                RecipientType.SHIPPER, request.getShipperId(),
+                NotificationType.STATUS_CHANGED,
+                statusLabel,
+                route + " 화물이 '" + statusLabel + "' 상태로 변경되었습니다.",
+                dispatch.getId());
         return dispatch;
+    }
+
+    private String statusLabel(ShipmentStatus status) {
+        return switch (status) {
+            case REQUESTED -> "요청됨";
+            case MATCHING -> "매칭중";
+            case DISPATCHED -> "배차완료";
+            case EN_ROUTE_TO_PICKUP -> "픽업지 이동중";
+            case PICKED_UP -> "픽업완료";
+            case IN_TRANSIT -> "운송중";
+            case COMPLETED -> "완료";
+            case CANCELED -> "취소";
+        };
     }
 }

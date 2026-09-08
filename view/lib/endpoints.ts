@@ -7,6 +7,7 @@ import type {
   DriverSignupRequest,
   DriverUpdateRequest,
   LoginRequest,
+  NotificationResponse,
   ShipmentRequestCreateRequest,
   ShipmentRequestResponse,
   ShipperResponse,
@@ -14,6 +15,7 @@ import type {
   ShipperUpdateRequest,
   ShipmentStatus,
   TokenResponse,
+  UnreadCountResponse,
 } from "./types";
 
 /* ------------------------------- 인증 ------------------------------- */
@@ -127,5 +129,28 @@ export const dispatchApi = {
     apiFetch<DispatchResponse>(`/dispatches/${id}/status`, {
       method: "PATCH",
       body: { status } satisfies DispatchStatusUpdateRequest,
+    }),
+};
+
+/* -------------------------------- 알림 ------------------------------- */
+
+export const notificationApi = {
+  /** 내 알림 목록 (최신순) */
+  listMine: () => apiFetch<NotificationResponse[]>("/notifications"),
+
+  /** 읽지 않은 알림 개수 (뱃지용) */
+  unreadCount: () =>
+    apiFetch<UnreadCountResponse>("/notifications/unread-count"),
+
+  /** 단건 읽음 처리 */
+  markRead: (id: number) =>
+    apiFetch<NotificationResponse>(`/notifications/${id}/read`, {
+      method: "PATCH",
+    }),
+
+  /** 모두 읽음 처리 */
+  markAllRead: () =>
+    apiFetch<UnreadCountResponse>("/notifications/read-all", {
+      method: "PATCH",
     }),
 };

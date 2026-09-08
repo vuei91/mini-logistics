@@ -1,6 +1,7 @@
 import type {
   DispatchStatus,
   DriverStatus,
+  NotificationType,
   ShipmentStatus,
   VehicleType,
 } from "./types";
@@ -43,6 +44,13 @@ export const DRIVER_STATUS_LABELS: Record<DriverStatus, string> = {
   AVAILABLE: "운행 가능",
   BUSY: "운행중",
   OFFLINE: "오프라인",
+};
+
+export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  DISPATCH_REQUESTED: "배차 요청",
+  DISPATCH_ACCEPTED: "배차 수락",
+  DISPATCH_REJECTED: "배차 거절",
+  STATUS_CHANGED: "상태 변경",
 };
 
 /** 운송 상태 진행 순서 (스텝퍼용) */

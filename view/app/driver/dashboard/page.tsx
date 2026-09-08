@@ -32,10 +32,17 @@ function DispatchCard({ dispatch }: { dispatch: DispatchResponse }) {
           </p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <DispatchStatusBadge status={dispatch.status} />
-          {dispatch.shipmentStatus ? (
+          {/*
+           * 배차가 진행 중(ACCEPTED)일 때는 운송 상태(픽업지 이동중/운송중 등)가
+           * 실제 진행 단계를 더 잘 나타내므로 운송 상태 뱃지만 표시한다.
+           * 그 외(제안됨/거절됨/완료됨 등 종료·대기 상태)는 배차 상태 뱃지만 표시해
+           * "완료됨"과 "완료"가 동시에 뜨는 중복을 없앤다.
+           */}
+          {dispatch.status === "ACCEPTED" && dispatch.shipmentStatus ? (
             <ShipmentStatusBadge status={dispatch.shipmentStatus} />
-          ) : null}
+          ) : (
+            <DispatchStatusBadge status={dispatch.status} />
+          )}
         </div>
       </div>
       <p className="mt-3 text-xs text-zinc-400">

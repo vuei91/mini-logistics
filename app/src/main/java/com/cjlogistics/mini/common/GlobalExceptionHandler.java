@@ -5,6 +5,7 @@ import com.cjlogistics.mini.dispatch.IllegalStatusTargetException;
 import com.cjlogistics.mini.dispatch.InvalidDispatchStatusTransitionException;
 import com.cjlogistics.mini.dispatch.NoMatchingDriverException;
 import com.cjlogistics.mini.driver.DriverNotFoundException;
+import com.cjlogistics.mini.notification.NotificationNotFoundException;
 import com.cjlogistics.mini.shipment.InvalidShipmentStatusTransitionException;
 import com.cjlogistics.mini.shipment.ShipmentRequestNotFoundException;
 import com.cjlogistics.mini.shipper.ShipperNotFoundException;
@@ -29,7 +30,8 @@ public class GlobalExceptionHandler {
             ShipperNotFoundException.class,
             DriverNotFoundException.class,
             ShipmentRequestNotFoundException.class,
-            DispatchNotFoundException.class
+            DispatchNotFoundException.class,
+            NotificationNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException e, HttpServletRequest req) {
         return build(HttpStatus.NOT_FOUND, e.getMessage(), req);

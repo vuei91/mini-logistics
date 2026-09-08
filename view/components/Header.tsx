@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationBell } from "./NotificationBell";
 
 export function Header() {
   const { user, initialized, logout } = useAuth();
@@ -57,6 +58,7 @@ export function Header() {
               >
                 내 프로필
               </Link>
+              <NotificationBell role={user.role} />
               <button
                 type="button"
                 onClick={handleLogout}
