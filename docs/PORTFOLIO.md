@@ -1,144 +1,175 @@
-# CJ Logistics Mini — 백엔드 포트폴리오
+# CJ Logistics Mini — Backend Portfolio
 
-> **화주-차주 매칭·배차**를 축소 구현하며 **이벤트 기반 아키텍처(RabbitMQ), 동시성 제어, 트랜잭션 일관성, AWS 클라우드 배포**를 직접 다룬 사이드 프로젝트입니다.
+> 화주가 등록한 운송 요청을 가용 기사와 매칭하고, 배차 수락부터 운송 완료까지 추적하는 물류 플랫폼입니다. 단순 CRUD를 넘어 상태 전이, 동시 배차 방지, DB·메시지 브로커 간 일관성, 실시간 알림과 클라우드 배포를 구현했습니다.
 
-- 라이브 데모: https://d1igl0x2mkyq92.cloudfront.net
-- 데모 계정 — 화주 `a@yopmail.com` / `1q2w3e4r!` · 기사 `c@yopmail.com` / `1q2w3e4r!`
+## 프로젝트 요약
 
----
+| 항목             | 내용                                                                         |
+| ---------------- | ---------------------------------------------------------------------------- |
+| 형태             | 개인 풀스택 프로젝트 — 백엔드 설계·구현 및 AWS 인프라 구축                   |
+| 핵심 기능        | 회원 인증, 화물 요청, 기사 매칭, 배차·운송 상태 관리, 운임 계산, 실시간 알림 |
+| Backend          | Java 17, Spring Boot 4.0, Spring MVC, Spring Data JPA, Spring Security, JWT  |
+| Data / Messaging | PostgreSQL, H2, RabbitMQ, Transactional Outbox                               |
+| Test             | JUnit 5, Mockito, AssertJ, Testcontainers, Awaitility — 테스트 선언 82개     |
+| Infra            | Docker, GitHub Actions, AWS EC2·RDS·ECR Public·S3·CloudFront                 |
+| Frontend         | Next.js 16, React 19, TypeScript                                             |
 
-## 한눈에 보기
+배포 URL: <https://d1igl0x2mkyq92.cloudfront.net>
 
-| | |
-|---|---|
-| **도메인** | 물류 화주-차주 매칭 및 배차 (수요응답형 온디맨드 매칭 성격) |
-| **역할** | 백엔드 설계·구현 및 AWS 인프라 구축 (개인 프로젝트) |
-| **핵심 스택** | Java 17 · Spring Boot · Spring Security(JWT) · JPA · **RabbitMQ** · **PostgreSQL** |
-| **인프라** | AWS EC2 · RDS · S3 · CloudFront · ECR (Docker) |
-| **테스트** | JUnit5 · Mockito · **Testcontainers** · 80+ 테스트 |
+## 해결하려 한 문제
 
----
+물류 배차는 조건에 맞는 기사를 찾는 것에서 끝나지 않습니다. 동일 기사가 여러 화물에 동시에 배정되지 않아야 하고, 요청과 배차는 허용된 순서로만 진행되어야 하며, 배차 확정이나 운송 완료 이벤트도 안정적으로 전달되어야 합니다.
 
-## 이 프로젝트가 다루는 문제
+1. 차량 종류·적재 용량·선호 노선을 반영한 기사 후보 산출
+2. 경쟁 요청 상황에서 동일 기사에 대한 중복 배차 방지
+3. 비즈니스 데이터 변경과 RabbitMQ 이벤트 발행 사이의 불일치 완화
 
-물류 배차는 **화주의 운송 요청**과 **가용 차주**를 조건(차량 종류·적재량·선호 노선)에 맞춰 매칭하고, 배차 확정부터 운송 완료까지의 상태를 추적하며 관련 이벤트를 비동기로 전파해야 하는 도메인입니다. 이 과정에서 실무에서 마주치는 세 가지 문제를 작은 스케일로 직접 구현·검증했습니다.
+## 시스템 구성
 
-- **동시성** — 한 차주가 동시 요청으로 여러 배차에 중복 배정되면 안 됨
-- **상태 전이** — 요청 → 매칭 → 배차 → 운송 → 완료의 단방향 흐름 보장
-- **비동기 이벤트 일관성** — 배차 확정/운송 완료 이벤트를 유실 없이 전파
-
----
-
-## 기술적으로 집중한 것
-
-### 1. Outbox 패턴으로 DB–메시지 일관성 보장
-배차 확정·운송 완료 시 RabbitMQ로 이벤트를 발행하는데, "DB 커밋은 됐는데 메시지 발행은 실패" 같은 **이중 쓰기 불일치**를 막아야 했습니다.
-
-- 비즈니스 트랜잭션 안에서 이벤트를 `outbox_events` 테이블에 `PENDING`으로 함께 저장 → 원자성 확보
-- 별도 스케줄러(`OutboxEventRelay`)가 PENDING 이벤트를 폴링해 발행하고 `PUBLISHED`로 전이
-- Topic Exchange + **DLX/DLQ**로 소비 실패 메시지를 격리
-- **Testcontainers로 실제 RabbitMQ를 띄워** 정상 발행·소비, Outbox 내구성, DLQ 이동까지 통합 테스트로 검증
-
-### 2. 배차 동시성 제어
-같은 기사가 동시 요청으로 중복 배차되는 경쟁 상태를 방어했습니다.
-
-- 배차 확정 시 기사 레코드를 **비관적 락(`SELECT ... FOR UPDATE`)** 으로 조회
-- 진행 중 배차(`PROPOSED`/`ACCEPTED`) 존재 여부를 재검증해 `DriverAlreadyAssignedException` 발생
-
-### 3. 리치 도메인 모델 + 상태 머신
-상태 전이를 서비스가 아닌 **엔티티 메서드에 캡슐화**하고, 허용되지 않은 전이는 예외로 차단했습니다. 상태 규칙이 도메인 객체 안에 응집되어 일관성이 깨질 여지를 줄였습니다.
-
-### 4. 전략 패턴 기반 매칭
-`MatchingStrategy` 인터페이스로 매칭 알고리즘을 분리해, 차량/적재량 필터링과 점수 계산(기본점 + 선호노선 가산)을 교체 가능한 구조로 만들었습니다.
-
-### 5. 보안 이중 방어
-- URL·HTTP 메서드별 역할 기반 접근제어(`SecurityConfig`)
-- 서비스 계층에서 **리소스 소유권 검증** — 같은 역할이라도 남의 리소스는 접근 불가
-
----
-
-## 트러블슈팅 (배포 과정에서 실제 해결한 문제)
-
-프론트를 S3+CloudFront, API를 EC2로 분리 배포하면서 마주친 문제들을 직접 진단·해결했습니다.
-
-| 문제 | 원인 | 해결 |
-|---|---|---|
-| API 응답이 JSON이 아닌 HTML로 옴 | CloudFront 커스텀 에러 응답(403/404→index.html)이 **전역 적용**되어 백엔드 정상 에러까지 가로챔 | 커스텀 에러 응답 제거 + `/api/*`는 통과시키는 CloudFront Function으로 SPA 폴백 대체 |
-| 브라우저에서 403 `Invalid CORS request` | 백엔드 허용 Origin이 CloudFront 도메인과 불일치 | `CORS_ALLOWED_ORIGINS`를 CloudFront 도메인으로 교정 |
-| 상세 페이지 `AccessDenied` | 정적 export는 빌드 시점에 없는 동적 경로(`/requests/[id]`)의 파일이 없음 | **동적 라우트를 쿼리스트링(`?id=`) 방식으로 재설계** — 인프라 특수 규칙 없이 근본 해결 |
-| CloudFront가 오리진 접근 실패(504) | 보안그룹이 특정 IP만 허용해 CloudFront 엣지 차단 | 8080 인바운드를 CloudFront **관리형 prefix list**로 제한 허용 |
-
-> 단순 우회 대신, "정적 호스팅에서 동적 라우트를 어떻게 다룰 것인가"라는 **근본 원인**을 파고들어 쿼리스트링 설계로 전환한 점이 이 과정의 핵심이었습니다.
-
----
-
-## API에 `/api` 프리픽스를 코드로 일괄 부여
-
-CloudFront에서 `/api/*`만 백엔드로 라우팅하기 위해 모든 컨트롤러에 프리픽스가 필요했습니다. 컨트롤러마다 `@RequestMapping`을 고치는 대신, `WebMvcConfigurer.configurePathMatch`로 **애플리케이션 패키지의 `@RestController`에만** 프리픽스를 자동 적용했습니다(springdoc 문서 엔드포인트는 제외). 설정 한 곳으로 전역 라우팅 규칙을 통제한 사례입니다.
-
----
-
-## 배포 파이프라인
-
-```
-로컬: docker build → ECR Public push
-EC2:  docker compose pull → up   (빌드 없이 이미지 실행, Spring Boot + RabbitMQ)
-DB:   RDS PostgreSQL
-프론트: next build(정적 export) → S3 sync → CloudFront invalidation
+```text
+Client
+  │ HTTPS
+  ▼
+CloudFront
+  ├─ /*      ──> S3 (Next.js static export)
+  └─ /api/*  ──> EC2 (Spring Boot container)
+                         ├─> RDS PostgreSQL
+                         └─> RabbitMQ container
 ```
 
-EC2에서 직접 빌드하던 방식을 **ECR 이미지 pull 방식으로 전환**해 EC2 부하와 배포 시간을 줄였습니다.
+- CloudFront 단일 도메인에서 정적 프론트와 API 오리진을 경로로 분리했습니다.
+- 애플리케이션 `@RestController`에만 `/api` 접두사를 일괄 적용했습니다.
+- 백엔드는 커밋 SHA로 태깅한 이미지를 ECR Public에 올리고 EC2에서 pull하여 실행합니다.
+- RDS는 EC2와 같은 VPC에 두고 RabbitMQ 포트는 Docker 내부 네트워크에만 노출했습니다.
 
----
+## 핵심 구현 1 — 상태 전이를 도메인에 캡슐화
 
-## 배운 점
+화물 요청과 배차 상태를 서비스에서 임의로 변경하면 호출 경로마다 검증이 달라질 수 있습니다. 이를 막기 위해 `ShipmentRequest`와 `Dispatch`가 상태 변경 메서드를 직접 관리하도록 설계했습니다.
 
-- 메시징에서 "발행했다고 믿는 것"과 "실제로 일관되게 발행되는 것"은 다르며, Outbox 패턴이 그 간극을 메운다는 것을 코드와 테스트로 체득했습니다.
-- 프론트/백엔드 분리 배포에서 CORS·Mixed Content·SPA 라우팅은 **어느 계층에서 푸느냐**가 설계의 핵심이라는 것을 배웠습니다.
-- 문제를 우회로 덮기보다 원인을 규명하고 구조를 바꾸는 편이 장기적으로 단순하다는 것을 배포 트러블슈팅에서 확인했습니다.
+```text
+ShipmentRequest
+REQUESTED -> MATCHING -> DISPATCHED -> EN_ROUTE_TO_PICKUP
+          -> PICKED_UP -> IN_TRANSIT -> COMPLETED
+REQUESTED 또는 MATCHING -> CANCELED
 
----
+Dispatch
+PROPOSED -> ACCEPTED -> COMPLETED
+PROPOSED -> REJECTED
+```
 
-## 직무 역량 매핑
+- 각 메서드는 현재 상태를 확인하고 허용된 전이만 수행합니다.
+- 잘못된 전이는 도메인 예외로 차단합니다.
+- `@RestControllerAdvice`가 예외를 400·401·403·404·409 응답으로 일관되게 변환합니다.
+- 정상·비정상 전이를 상태 머신 단위 테스트로 검증했습니다.
 
-물류 플랫폼(화주/차주 매칭·배차) 백엔드 직무에서 요구되는 역량을 이 프로젝트로 어떻게 다뤘는지 정리했습니다.
+## 핵심 구현 2 — 전략 패턴 기반 기사 매칭
 
-| 요구 역량 | 프로젝트에서 다룬 내용 |
-|---|---|
-| 화주/차주 매칭·배차 알고리즘 | 차량 종류·적재량 필터링 + 선호노선 가산 점수화 매칭(`MatchingStrategy` 전략 패턴), 배차 생성/수락/거절/운송상태 진행 |
-| Java · Spring(Boot/JPA) 서버 개발 | Spring Boot + JPA 기반 계층형 설계, 리치 도메인 모델(상태 전이 캡슐화) |
-| RESTful API 설계 | 역할 기반 REST API, `WebMvcConfigurer`로 `/api` 전역 라우팅 통제, springdoc(OpenAPI) 문서화 |
-| PostgreSQL / RDBMS 모델링 | RDS PostgreSQL 운영, 엔티티·인덱스 설계, 비관적 락 활용 쿼리 |
-| RabbitMQ 비동기 메시징·이벤트 처리 | Outbox 패턴 + Topic Exchange + DLX/DLQ, 스케줄러 릴레이, Testcontainers 통합 검증 |
-| AWS·Docker 컨테이너 운영 | EC2(Docker Compose) · RDS · S3 · CloudFront · ECR 직접 구축·배포 |
-| 테스트 코드(JUnit/Mockito) | 80+ 테스트 — 단위·컨트롤러 슬라이스·통합·메시징(Testcontainers) |
+매칭 기준은 거리, 운임, 기사 선호, 평점 등으로 확장될 수 있습니다. 배차 유스케이스와 정책 변경을 분리하기 위해 `MatchingStrategy` 인터페이스와 `DefaultMatchingStrategy` 구현을 뒀습니다.
 
----
+- 가용 기사 중 요청 차량 종류와 일치하고 총 화물 중량을 적재할 수 있는 기사만 선별합니다.
+- 기본 100점에 출발지·도착지 선호 노선이 일치하면 30점을 더해 내림차순으로 반환합니다.
+- 화주가 후보를 선택하거나, 미선택 시 1순위 후보를 자동 배차합니다.
+- 예상 운임은 기본요금, 총중량, 차량 계수, 동일·타지역 계수를 조합해 100원 단위로 반올림합니다.
 
-## 확장 방향 (진행/계획)
+실거리·ETA·기사 평점 정책은 `MatchingStrategy`의 새 구현으로 추가할 수 있습니다.
 
-이 프로젝트를 실무 요구 수준으로 끌어올린다면 다음을 다룰 계획입니다. (현재 미구현 항목을 정직하게 기록)
+## 핵심 구현 3 — 비관적 락을 이용한 중복 배차 방어
 
-- **런타임 상향**: 현재 Java 17 / Spring Boot 4 → 팀 표준(JDK 21 / Spring Boot 3.x)에 맞춘 정렬
-- **컨테이너 오케스트레이션**: 현재 EC2 + Docker Compose → **Kubernetes(EKS)** 로 이전, 무중단 배포
-- **캐시/조회 성능**: 매칭 후보·알림 조회에 **Redis** 도입
-- **관측성**: 구조적 로깅·메트릭·트레이싱(분산 추적)으로 배차 파이프라인 모니터링
+후보 조회 시점에는 가용 기사여도 두 요청이 거의 동시에 같은 기사를 선택하면 중복 배차가 생길 수 있습니다.
 
----
+1. 후보 선택 후 `findByIdForUpdate`로 기사 행에 `PESSIMISTIC_WRITE` 락을 획득합니다.
+2. 락 안에서 기사 상태가 여전히 `AVAILABLE`인지 재확인합니다.
+3. `PROPOSED` 또는 `ACCEPTED` 배차가 이미 있는지도 재확인합니다.
+4. 조건을 만족하지 않으면 `DriverAlreadyAssignedException`으로 트랜잭션을 중단합니다.
 
-## 화면
+배차는 충돌 재시도보다 한 명만 확실히 선점하는 것이 중요하고 트랜잭션이 짧아 비관적 락을 선택했습니다. DB 락이므로 같은 DB를 쓰는 다중 애플리케이션 인스턴스에도 적용됩니다. 현재 테스트는 락 호출과 중복 검사 분기를 검증하며, 실제 PostgreSQL 병렬 트랜잭션 통합 테스트는 추가 과제입니다.
 
-| 랜딩 | 로그인 | 화주 대시보드 |
-|---|---|---|
-| ![landing](./images/01-landing.png) | ![login](./images/02-login.png) | ![shipper](./images/04-shipper-dashboard.png) |
+## 핵심 구현 4 — Transactional Outbox와 RabbitMQ
 
-| 화물 요청 생성 | 기사 대시보드 | 알림 |
-|---|---|---|
-| ![new](./images/05-shipper-request-new.png) | ![driver](./images/07-driver-dashboard.png) | ![noti](./images/06-shipper-notifications.png) |
+배차 상태를 저장한 뒤 RabbitMQ에 바로 발행하면 두 시스템을 하나의 로컬 트랜잭션으로 묶을 수 없습니다. 이중 쓰기 불일치를 줄이기 위해 다음 구조를 구현했습니다.
 
----
+- 배차 수락과 운송 완료 트랜잭션에서 도메인 데이터와 `PENDING` Outbox 이벤트를 함께 저장합니다.
+- `OutboxEventRelay`가 생성 순으로 최대 100개를 주기적으로 읽어 Topic Exchange에 발행합니다.
+- 발행 호출 후 이벤트를 `PUBLISHED`로 변경합니다.
+- 소비 재시도를 3회로 제한하고, 계속 실패한 메시지는 DLX를 통해 DLQ로 격리합니다.
+- 프로퍼티로 메시징을 활성화해 환경별 구성을 분리했습니다.
 
-## 더 보기
+Outbox 저장으로 비즈니스 변경과 발행 대상 기록은 원자적으로 남습니다. 발행 후 `PUBLISHED` 커밋 전에 릴레이가 중단되면 재발행될 수 있으므로 전달 모델은 at-least-once에 가깝습니다.
 
-- 상세 구현 문서: [IMPLEMENTATION.md](./IMPLEMENTATION.md)
-- 라이브 데모: https://d1igl0x2mkyq92.cloudfront.net
+현재 publisher confirm과 소비자 처리 이력 기반 멱등성은 구현되어 있지 않습니다. 운영 수준에서는 다음을 보강할 계획입니다.
+
+1. publisher confirm/return으로 브로커 수신이 확인된 이벤트만 완료 처리
+2. `eventId` 기반 소비 이력 또는 멱등 키로 중복 소비 방지
+3. 다중 릴레이에서 `SKIP LOCKED` 또는 리스 방식으로 이벤트 선점
+4. 재시도 횟수·마지막 오류 기록과 운영 재처리 기능 추가
+
+## 핵심 구현 5 — JWT 인가와 SSE 알림
+
+- Spring Security를 stateless로 구성하고 JWT의 `role`, `profileId`를 인증 정보로 사용했습니다.
+- URL·HTTP 메서드별 역할 검증과 서비스 계층의 리소스 소유권 검증을 적용했습니다.
+- 배차 요청·수락·거절·운송 상태 알림을 DB에 저장한 뒤 SSE로 전달합니다.
+- `ConcurrentHashMap`과 `CopyOnWriteArrayList`로 사용자별 다중 탭 연결을 관리하고 종료 시 emitter를 제거합니다.
+- 기본 `EventSource`의 헤더 제약 때문에 SSE 구독에는 쿼리 토큰을 사용했습니다.
+
+쿼리 토큰은 로그나 기록에 노출될 수 있어 실서비스에서는 HttpOnly 쿠키나 짧은 수명의 SSE 전용 토큰이 적절합니다. emitter도 인메모리이므로 수평 확장 시 Redis Pub/Sub 같은 공유 채널이 필요합니다.
+
+## 테스트 전략
+
+소스 기준 `@Test` 선언 82개를 구성했습니다.
+
+| 범위         | 검증 내용                                              |
+| ------------ | ------------------------------------------------------ |
+| 도메인 단위  | 화물 요청·배차 상태 머신의 정상/불법 전이              |
+| 서비스 단위  | 요청 생성, 배차 생성·수락·완료, 소유권, 중복 배차 검사 |
+| 알고리즘     | 차량·적재량 필터, 선호 노선 점수와 정렬                |
+| MVC 슬라이스 | 요청 검증, 상태 코드, 응답 계약, principal 전달        |
+| 보안 통합    | 비로그인·역할별 접근 제어                              |
+| 조회 통합    | 화주별 요청과 기사별 배차 목록 격리·정렬               |
+| 메시징 통합  | 실제 RabbitMQ에서 Outbox 상태 전이와 DLQ 이동          |
+
+RabbitMQ는 목으로 대체하지 않고 Testcontainers로 실제 `rabbitmq:3.13-management`를 실행했습니다. Awaitility로 다음 비동기 결과를 확인합니다.
+
+- `PENDING` 이벤트가 릴레이 이후 `PUBLISHED`로 바뀌는지
+- 이벤트 라우팅 키가 보존되는지
+- 반복 실패 메시지가 재시도 소진 후 DLQ로 이동하는지
+
+## 더 발전시킨다면
+
+이번 프로젝트에서는 물류 배차의 핵심 흐름과 이벤트 기반 구조를 작은 규모로 끝까지 구현하는 데 집중했습니다. 서비스를 더 큰 트래픽과 운영 환경으로 확장한다면 다음 주제를 깊게 다뤄보고 싶습니다.
+
+### 실제 거리와 운영 데이터를 반영한 매칭 고도화
+
+현재 매칭은 차량 종류, 적재 용량, 선호 노선을 기준으로 점수를 계산합니다. 다음 단계에서는 지도 API를 이용한 실거리와 예상 도착시간, 공차 이동 거리, 기사별 수락률과 운행 이력을 함께 반영하고 싶습니다. 점수의 근거를 화주와 기사에게 설명할 수 있도록 항목별 점수도 함께 제공하는 방향을 고려하고 있습니다.
+
+### 이벤트 처리의 신뢰성과 운영성 강화
+
+현재 Transactional Outbox와 DLQ로 이벤트 저장과 실패 메시지 격리 흐름을 구현했습니다. 여기에 publisher confirm, 이벤트 ID 기반 멱등 처리, 실패 이벤트 재처리 기능을 더해 중복과 장애 상황에서도 운영자가 안전하게 복구할 수 있는 구조로 발전시키고 싶습니다. 트래픽이 증가하면 폴링 방식과 CDC 방식의 지연·운영 복잡도도 비교해볼 수 있습니다.
+
+### 부하 기반 동시성 전략 검증
+
+비관적 락으로 동일 기사에 대한 중복 배차를 방어했지만, 기사별 요청 집중도가 높아지면 락 경합이 처리량에 영향을 줄 수 있습니다. PostgreSQL 기반 병렬 통합 테스트와 부하 테스트로 충돌률과 대기 시간을 측정하고, 낙관적 락·큐 기반 직렬화·기사 단위 파티셔닝을 상황별로 비교하고 싶습니다.
+
+### 확장 가능한 실시간 알림 구조
+
+현재 SSE 연결은 단일 애플리케이션 인스턴스의 메모리에서 관리합니다. 서버를 여러 대로 확장할 경우 Redis Pub/Sub이나 별도 알림 브로커를 통해 이벤트를 공유하고, 연결 재개를 위한 Last-Event-ID와 누락 알림 재조회 기능까지 추가하고 싶습니다.
+
+### 운영 자동화와 관측성
+
+Flyway를 통한 스키마 버전 관리, 무중단 배포와 자동 롤백, 구조화 로그·메트릭·분산 추적을 적용하고 싶습니다. 특히 Outbox 적체량, DLQ 메시지 수, 매칭 실패율, 배차 확정 소요 시간을 핵심 지표로 정의해 장애를 사용자 제보보다 먼저 발견할 수 있는 환경을 만드는 것이 목표입니다.
+
+## 백엔드 역량 매핑
+
+| 역량             | 프로젝트 근거                                                      |
+| ---------------- | ------------------------------------------------------------------ |
+| 도메인 모델링    | 요청·배차 상태 전이와 불변식을 엔티티에 캡슐화                     |
+| 트랜잭션·동시성  | 기사 행 비관적 락과 활성 배차 재검증                               |
+| 이벤트 기반 설계 | Transactional Outbox, Topic Exchange, DLX/DLQ                      |
+| 확장 가능한 설계 | `MatchingStrategy`로 배차 흐름과 점수 정책 분리                    |
+| API·보안         | JWT 역할 인가, 소유권 검사, 일관된 오류 응답                       |
+| 테스트           | 단위·슬라이스·통합·실브로커 테스트                                 |
+| 운영·배포        | Docker 이미지 기반 EC2 배포, RDS, CloudFront, OIDC CI/CD           |
+| 성장 방향 설정   | 매칭 정확도, 이벤트 신뢰성, 동시성 검증, 관측성의 확장 과제 구체화 |
+
+## 30초 프로젝트 소개
+
+“화주와 기사를 연결하는 미니 물류 배차 플랫폼을 개인 프로젝트로 개발했습니다. Java와 Spring Boot로 운송 요청부터 배차 수락, 픽업, 운송 완료까지의 상태 흐름을 구현했고, 동일 기사의 중복 배차는 DB 비관적 락과 활성 배차 재검증으로 방어했습니다. 배차 확정과 완료 이벤트는 Transactional Outbox에 저장한 뒤 RabbitMQ로 전달하고, DLQ까지 실제 RabbitMQ Testcontainers 테스트로 검증했습니다. AWS EC2·RDS·S3·CloudFront·ECR과 GitHub Actions를 연결해 이미지 기반 배포 환경도 구성했습니다. 앞으로는 실제 거리와 운행 데이터를 반영한 매칭, 이벤트 멱등성, 부하 기반 동시성 검증과 관측성을 중심으로 발전시키고 싶습니다.”
