@@ -32,7 +32,7 @@ class SecurityIntegrationTest {
 
     @Test
     void mutation_without_bearer_token_is_unauthorized() throws Exception {
-        mockMvc.perform(post("/shipment-requests")
+        mockMvc.perform(post("/api/shipment-requests")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"shipperId\":1,\"originRegion\":\"서울\",\"destinationRegion\":\"부산\",\"requiredVehicleType\":\"TRUCK_1T\",\"cargoItems\":[{\"description\":\"화물\",\"weightKg\":1}]}"))
                 .andExpect(status().isUnauthorized());
@@ -41,7 +41,7 @@ class SecurityIntegrationTest {
     @Test
     void driver_token_cannot_create_shipment() throws Exception {
         String token = jwtTokenService.create("driver@example.com", "DRIVER", 1L);
-        mockMvc.perform(post("/shipment-requests").header("Authorization", "Bearer " + token)
+        mockMvc.perform(post("/api/shipment-requests").header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"shipperId\":1,\"originRegion\":\"서울\",\"destinationRegion\":\"부산\",\"requiredVehicleType\":\"TRUCK_1T\",\"cargoItems\":[{\"description\":\"화물\",\"weightKg\":1}]}"))
                 .andExpect(status().isForbidden());
@@ -51,7 +51,7 @@ class SecurityIntegrationTest {
     void driver_token_cannot_start_dispatch_matching() throws Exception {
         String token = jwtTokenService.create("driver@example.com", "DRIVER", 1L);
 
-        mockMvc.perform(post("/shipment-requests/1/dispatch")
+        mockMvc.perform(post("/api/shipment-requests/1/dispatch")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
@@ -59,14 +59,14 @@ class SecurityIntegrationTest {
     @Test
     void shipper_token_cannot_accept_dispatch() throws Exception {
         String token = jwtTokenService.create("cj@example.com", "SHIPPER", 1L);
-        mockMvc.perform(post("/dispatches/1/accept").header("Authorization", "Bearer " + token))
+        mockMvc.perform(post("/api/dispatches/1/accept").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void shipper_token_cannot_update_dispatch_status() throws Exception {
         String token = jwtTokenService.create("cj@example.com", "SHIPPER", 1L);
-        mockMvc.perform(patch("/dispatches/1/status").header("Authorization", "Bearer " + token)
+        mockMvc.perform(patch("/api/dispatches/1/status").header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"EN_ROUTE_TO_PICKUP\"}"))
                 .andExpect(status().isForbidden());
     }
@@ -76,7 +76,7 @@ class SecurityIntegrationTest {
         Dispatch dispatch = dispatchRepository.save(new Dispatch(100L, 50L, 130.0));
         String token = jwtTokenService.create("other-driver@example.com", "DRIVER", 51L);
 
-        mockMvc.perform(post("/dispatches/{id}/accept", dispatch.getId())
+        mockMvc.perform(post("/api/dispatches/{id}/accept", dispatch.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
@@ -87,7 +87,7 @@ class SecurityIntegrationTest {
                 10L, "서울", "부산", List.of(new CargoItem("화물", 1)), VehicleType.TRUCK_1T));
         String token = jwtTokenService.create("other-shipper@example.com", "SHIPPER", 11L);
 
-        mockMvc.perform(get("/shipment-requests/{id}", shipment.getId())
+        mockMvc.perform(get("/api/shipment-requests/{id}", shipment.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
@@ -97,7 +97,7 @@ class SecurityIntegrationTest {
         Shipper shipper = shipperRepository.save(Shipper.register("CJ 화주", "010-1111-2222", "cj@example.com", "hash"));
         String token = jwtTokenService.create("cj@example.com", "SHIPPER", shipper.getId());
 
-        mockMvc.perform(post("/shipment-requests").header("Authorization", "Bearer " + token)
+        mockMvc.perform(post("/api/shipment-requests").header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"shipperId\":" + shipper.getId() + ",\"originRegion\":\"서울\",\"destinationRegion\":\"부산\",\"requiredVehicleType\":\"TRUCK_1T\",\"cargoItems\":[{\"description\":\"화물\",\"weightKg\":1}]}"))
                 .andExpect(status().isCreated());

@@ -1,8 +1,12 @@
 package com.cjlogistics.mini.dispatch;
 
 import com.cjlogistics.mini.dispatch.dto.DispatchStatusUpdateRequest;
+import com.cjlogistics.mini.shipment.CargoItem;
+import com.cjlogistics.mini.shipment.ShipmentRequest;
 import com.cjlogistics.mini.shipment.ShipmentRequestNotFoundException;
 import com.cjlogistics.mini.shipment.ShipmentStatus;
+import com.cjlogistics.mini.driver.VehicleType;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -13,6 +17,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 import com.cjlogistics.mini.security.JwtTokenService;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -32,6 +39,7 @@ class DispatchControllerTest {
 
     @MockitoBean
     DispatchService dispatchService;
+    @MockitoBean com.cjlogistics.mini.shipment.ShipmentRequestService shipmentRequestService;
     @MockitoBean JwtTokenService jwtTokenService;
 
     private Dispatch savedDispatch(Long id, Long shipmentRequestId, Long driverId, double score) {
@@ -40,14 +48,23 @@ class DispatchControllerTest {
         return dispatch;
     }
 
+    private ShipmentRequest shipmentWithStatus(ShipmentStatus status) {
+        ShipmentRequest request = new ShipmentRequest(
+                1L, "서울", "부산", List.of(new CargoItem("cargo", 100)), VehicleType.TRUCK_1T);
+        ReflectionTestUtils.setField(request, "id", 100L);
+        ReflectionTestUtils.setField(request, "status", status);
+        return request;
+    }
+
     @Test
     void dispatch_endpoint_returns_201_with_body() throws Exception {
         Dispatch dispatch = savedDispatch(1L, 100L, 50L, 130.0);
-        given(dispatchService.matchAndDispatch(100L)).willReturn(dispatch);
+        given(dispatchService.matchAndDispatch(eq(100L), any())).willReturn(dispatch);
+        given(shipmentRequestService.get(anyLong())).willReturn(shipmentWithStatus(ShipmentStatus.MATCHING));
 
-        mockMvc.perform(post("/shipment-requests/100/dispatch"))
+        mockMvc.perform(post("/api/shipment-requests/100/dispatch"))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", org.hamcrest.Matchers.endsWith("/dispatches/1")))
+                .andExpect(header().string("Location", org.hamcrest.Matchers.endsWith("/api/dispatches/1")))
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.shipmentRequestId").value(100))
                 .andExpect(jsonPath("$.driverId").value(50))
@@ -57,19 +74,19 @@ class DispatchControllerTest {
 
     @Test
     void dispatch_endpoint_returns_404_when_shipment_not_found() throws Exception {
-        given(dispatchService.matchAndDispatch(999L))
+        given(dispatchService.matchAndDispatch(eq(999L), any()))
                 .willThrow(new ShipmentRequestNotFoundException(999L));
 
-        mockMvc.perform(post("/shipment-requests/999/dispatch"))
+        mockMvc.perform(post("/api/shipment-requests/999/dispatch"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void dispatch_endpoint_returns_409_when_no_matching_driver() throws Exception {
-        given(dispatchService.matchAndDispatch(100L))
+        given(dispatchService.matchAndDispatch(eq(100L), any()))
                 .willThrow(new NoMatchingDriverException(100L));
 
-        mockMvc.perform(post("/shipment-requests/100/dispatch"))
+        mockMvc.perform(post("/api/shipment-requests/100/dispatch"))
                 .andExpect(status().isConflict());
     }
 
@@ -77,8 +94,9 @@ class DispatchControllerTest {
     void get_dispatch_returns_body() throws Exception {
         Dispatch dispatch = savedDispatch(1L, 100L, 50L, 100.0);
         given(dispatchService.get(1L)).willReturn(dispatch);
+        given(shipmentRequestService.get(anyLong())).willReturn(shipmentWithStatus(ShipmentStatus.MATCHING));
 
-        mockMvc.perform(get("/dispatches/1"))
+        mockMvc.perform(get("/api/dispatches/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
@@ -87,7 +105,7 @@ class DispatchControllerTest {
     void get_dispatch_returns_404_when_not_found() throws Exception {
         given(dispatchService.get(999L)).willThrow(new DispatchNotFoundException(999L));
 
-        mockMvc.perform(get("/dispatches/999"))
+        mockMvc.perform(get("/api/dispatches/999"))
                 .andExpect(status().isNotFound());
     }
 
@@ -96,8 +114,9 @@ class DispatchControllerTest {
         Dispatch dispatch = savedDispatch(1L, 100L, 50L, 130.0);
         ReflectionTestUtils.setField(dispatch, "status", DispatchStatus.ACCEPTED);
         given(dispatchService.accept(1L)).willReturn(dispatch);
+        given(shipmentRequestService.get(anyLong())).willReturn(shipmentWithStatus(ShipmentStatus.DISPATCHED));
 
-        mockMvc.perform(post("/dispatches/1/accept"))
+        mockMvc.perform(post("/api/dispatches/1/accept"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACCEPTED"));
     }
@@ -107,7 +126,7 @@ class DispatchControllerTest {
         given(dispatchService.accept(1L))
                 .willThrow(new InvalidDispatchStatusTransitionException(DispatchStatus.ACCEPTED, DispatchStatus.ACCEPTED));
 
-        mockMvc.perform(post("/dispatches/1/accept"))
+        mockMvc.perform(post("/api/dispatches/1/accept"))
                 .andExpect(status().isConflict());
     }
 
@@ -116,8 +135,9 @@ class DispatchControllerTest {
         Dispatch dispatch = savedDispatch(1L, 100L, 50L, 130.0);
         ReflectionTestUtils.setField(dispatch, "status", DispatchStatus.REJECTED);
         given(dispatchService.reject(1L)).willReturn(dispatch);
+        given(shipmentRequestService.get(anyLong())).willReturn(shipmentWithStatus(ShipmentStatus.MATCHING));
 
-        mockMvc.perform(post("/dispatches/1/reject"))
+        mockMvc.perform(post("/api/dispatches/1/reject"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REJECTED"));
     }
@@ -127,10 +147,11 @@ class DispatchControllerTest {
         Dispatch dispatch = savedDispatch(1L, 100L, 50L, 130.0);
         ReflectionTestUtils.setField(dispatch, "status", DispatchStatus.ACCEPTED);
         given(dispatchService.updateShipmentStatus(1L, ShipmentStatus.PICKED_UP)).willReturn(dispatch);
+        given(shipmentRequestService.get(anyLong())).willReturn(shipmentWithStatus(ShipmentStatus.PICKED_UP));
 
         DispatchStatusUpdateRequest body = new DispatchStatusUpdateRequest(ShipmentStatus.PICKED_UP);
 
-        mockMvc.perform(patch("/dispatches/1/status")
+        mockMvc.perform(patch("/api/dispatches/1/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(body)))
                 .andExpect(status().isOk())
@@ -144,7 +165,7 @@ class DispatchControllerTest {
 
         DispatchStatusUpdateRequest body = new DispatchStatusUpdateRequest(ShipmentStatus.REQUESTED);
 
-        mockMvc.perform(patch("/dispatches/1/status")
+        mockMvc.perform(patch("/api/dispatches/1/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(body)))
                 .andExpect(status().isBadRequest());
@@ -152,7 +173,7 @@ class DispatchControllerTest {
 
     @Test
     void patch_status_returns_400_when_status_missing() throws Exception {
-        mockMvc.perform(patch("/dispatches/1/status")
+        mockMvc.perform(patch("/api/dispatches/1/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());

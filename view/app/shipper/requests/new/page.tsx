@@ -42,7 +42,7 @@ function NewRequestForm() {
           weightKg: Number(it.weightKg),
         })),
       });
-      router.push(`/shipper/requests/${created.id}`);
+      router.push(`/shipper/requests/detail?id=${created.id}`);
     } catch (err) {
       setError(
         err instanceof ApiError

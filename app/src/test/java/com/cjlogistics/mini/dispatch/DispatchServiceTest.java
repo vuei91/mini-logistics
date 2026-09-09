@@ -35,6 +35,8 @@ class DispatchServiceTest {
     @Mock DispatchRepository dispatchRepository;
     @Mock MatchingStrategy matchingStrategy;
     @Mock OutboxEventStore outboxEventStore;
+    @Mock FareCalculator fareCalculator;
+    @Mock com.cjlogistics.mini.notification.NotificationService notificationService;
     @InjectMocks DispatchService dispatchService;
 
     private ShipmentRequest request(ShipmentStatus status) {

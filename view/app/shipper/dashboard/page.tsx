@@ -83,7 +83,7 @@ function ShipperDashboard() {
             {requests.map((req) => (
               <li key={req.id}>
                 <Link
-                  href={`/shipper/requests/${req.id}`}
+                  href={`/shipper/requests/detail?id=${req.id}`}
                   className="block rounded-xl border border-zinc-200 bg-white p-5 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
                 >
                   <div className="flex items-start justify-between gap-3">

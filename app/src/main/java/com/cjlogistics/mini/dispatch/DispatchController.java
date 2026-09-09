@@ -51,7 +51,7 @@ public class DispatchController {
         Long targetDriverId = request == null ? null : request.driverId();
         Dispatch dispatch = dispatchService.matchAndDispatch(shipmentRequestId, targetDriverId);
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/dispatches/{id}")
+                .path("/api/dispatches/{id}")
                 .buildAndExpand(dispatch.getId())
                 .toUri();
         return ResponseEntity.created(location).body(toResponse(dispatch));

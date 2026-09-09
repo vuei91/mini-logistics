@@ -28,7 +28,7 @@ class ShipperControllerTest {
     void get_returns_404_when_not_found() throws Exception {
         org.mockito.BDDMockito.given(shipperService.get(999L)).willThrow(new ShipperNotFoundException(999L));
 
-        mockMvc.perform(get("/shippers/999"))
+        mockMvc.perform(get("/api/shippers/999"))
                 .andExpect(status().isNotFound());
     }
 }

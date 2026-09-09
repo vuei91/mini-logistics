@@ -29,7 +29,7 @@ class DriverControllerTest {
     void get_returns_404_when_not_found() throws Exception {
         given(driverService.get(999L)).willThrow(new DriverNotFoundException(999L));
 
-        mockMvc.perform(get("/drivers/999"))
+        mockMvc.perform(get("/api/drivers/999"))
                 .andExpect(status().isNotFound());
     }
 }

@@ -5,10 +5,9 @@
 
 services:
   backend:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
-    image: cj-logistics-backend:latest
+    # ECR Public 에 푸시된 이미지를 그대로 받아 실행한다(EC2에서 빌드하지 않음).
+    # 태그는 배포 시 BACKEND_IMAGE 로 주입한다(미지정 시 latest).
+    image: ${BACKEND_IMAGE:-public.ecr.aws/i6n5a0h7/portfolio:latest}
     container_name: cj-logistics-backend
     restart: unless-stopped
     depends_on:

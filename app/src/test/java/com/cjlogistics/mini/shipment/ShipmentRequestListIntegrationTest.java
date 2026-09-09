@@ -33,7 +33,7 @@ class ShipmentRequestListIntegrationTest {
 
         String token = jwtTokenService.create("shipper-200@example.com", "SHIPPER", 200L);
 
-        mockMvc.perform(get("/shipment-requests").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/shipment-requests").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].shipperId").value(200))
@@ -44,14 +44,14 @@ class ShipmentRequestListIntegrationTest {
     void listMine_returns_empty_array_when_shipper_has_no_requests() throws Exception {
         String token = jwtTokenService.create("shipper-999@example.com", "SHIPPER", 999L);
 
-        mockMvc.perform(get("/shipment-requests").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/shipment-requests").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
     void listMine_without_token_is_unauthorized() throws Exception {
-        mockMvc.perform(get("/shipment-requests"))
+        mockMvc.perform(get("/api/shipment-requests"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -59,7 +59,7 @@ class ShipmentRequestListIntegrationTest {
     void listMine_with_driver_token_is_forbidden() throws Exception {
         String token = jwtTokenService.create("driver@example.com", "DRIVER", 1L);
 
-        mockMvc.perform(get("/shipment-requests").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/shipment-requests").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
 }

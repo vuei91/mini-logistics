@@ -16,7 +16,7 @@ public class OpenApiConfig {
     @Bean
     public OpenApiCustomizer bearerAuthCustomizer() {
         return openApi -> openApi.getPaths().forEach((path, pathItem) -> {
-            if (!path.startsWith("/auth/")) {
+            if (!path.startsWith("/api/auth/")) {
                 pathItem.readOperationsMap().forEach((method, operation) -> {
                     String securityScheme = roleFor(path, method.name());
                     if (securityScheme != null) {
@@ -31,19 +31,19 @@ public class OpenApiConfig {
     }
 
     private String roleFor(String path, String method) {
-        if ("POST".equals(method) && "/shipment-requests".equals(path)) {
+        if ("POST".equals(method) && "/api/shipment-requests".equals(path)) {
             return "shipperAuth";
         }
-        if ("POST".equals(method) && path.matches("/shipment-requests/[^/]+/cancel")) {
+        if ("POST".equals(method) && path.matches("/api/shipment-requests/[^/]+/cancel")) {
             return "shipperAuth";
         }
-        if ("POST".equals(method) && path.matches("/shipment-requests/[^/]+/dispatch")) {
+        if ("POST".equals(method) && path.matches("/api/shipment-requests/[^/]+/dispatch")) {
             return "shipperAuth";
         }
-        if ("POST".equals(method) && path.matches("/dispatches/[^/]+/(accept|reject)")) {
+        if ("POST".equals(method) && path.matches("/api/dispatches/[^/]+/(accept|reject)")) {
             return "driverAuth";
         }
-        if ("PATCH".equals(method) && path.matches("/dispatches/[^/]+/status")) {
+        if ("PATCH".equals(method) && path.matches("/api/dispatches/[^/]+/status")) {
             return "driverAuth";
         }
         return null;

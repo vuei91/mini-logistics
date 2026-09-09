@@ -26,38 +26,38 @@ class OpenApiSmokeTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         // 등록된 컨트롤러가 스펙에 노출되는지 확인
-        assertThat(response.getBody()).contains("/shippers");
-        assertThat(response.getBody()).contains("/drivers");
-        assertThat(response.getBody()).contains("/shipment-requests");
-        assertThat(response.getBody()).contains("/dispatches");
+        assertThat(response.getBody()).contains("/api/shippers");
+        assertThat(response.getBody()).contains("/api/drivers");
+        assertThat(response.getBody()).contains("/api/shipment-requests");
+        assertThat(response.getBody()).contains("/api/dispatches");
         // 프로젝트 메타데이터 노출
         assertThat(response.getBody()).contains("CJ Logistics Mini API");
-        assertThat(response.getBody()).contains("/auth/shippers/signup");
-        assertThat(response.getBody()).contains("/auth/drivers/signup");
-        assertThat(response.getBody()).contains("/auth/shippers/login");
-        assertThat(response.getBody()).contains("/auth/drivers/login");
+        assertThat(response.getBody()).contains("/api/auth/shippers/signup");
+        assertThat(response.getBody()).contains("/api/auth/drivers/signup");
+        assertThat(response.getBody()).contains("/api/auth/shippers/login");
+        assertThat(response.getBody()).contains("/api/auth/drivers/login");
         JsonNode openApi = new ObjectMapper().readTree(response.getBody());
         // 로그인/회원가입은 공개 API이고, 업무 API는 bearerAuth를 사용한다.
         assertThat(openApi.path("components").path("securitySchemes").path("shipperAuth")
             .path("type").asText()).isEqualTo("http");
         assertThat(openApi.path("components").path("securitySchemes").path("driverAuth")
             .path("scheme").asText()).isEqualTo("bearer");
-        assertThat(openApi.path("paths").path("/shipment-requests").path("post")
+        assertThat(openApi.path("paths").path("/api/shipment-requests").path("post")
             .path("parameters").isMissingNode()).isTrue();
-        assertThat(openApi.path("paths").path("/shipment-requests").path("post")
+        assertThat(openApi.path("paths").path("/api/shipment-requests").path("post")
             .path("security").toString()).contains("shipperAuth");
         JsonNode dispatchSecurity = openApi.path("paths")
-            .path("/shipment-requests/{shipmentRequestId}/dispatch").path("post").path("security");
+            .path("/api/shipment-requests/{shipmentRequestId}/dispatch").path("post").path("security");
         assertThat(dispatchSecurity.toString()).contains("shipperAuth");
         assertThat(dispatchSecurity.toString()).doesNotContain("driverAuth");
-        assertThat(openApi.path("paths").path("/dispatches/{id}/accept").path("post")
+        assertThat(openApi.path("paths").path("/api/dispatches/{id}/accept").path("post")
             .path("security").toString()).contains("driverAuth");
-        assertThat(openApi.path("paths").path("/auth/shippers/login").path("post")
+        assertThat(openApi.path("paths").path("/api/auth/shippers/login").path("post")
                 .path("security").isMissingNode()).isTrue();
-        assertThat(openApi.path("paths").path("/auth/shippers/login").path("post")
+        assertThat(openApi.path("paths").path("/api/auth/shippers/login").path("post")
                 .path("parameters").isMissingNode()).isTrue();
-        assertThat(openApi.path("paths").path("/shippers").path("post").isMissingNode()).isTrue();
-        assertThat(openApi.path("paths").path("/drivers").path("post").isMissingNode()).isTrue();
+        assertThat(openApi.path("paths").path("/api/shippers").path("post").isMissingNode()).isTrue();
+        assertThat(openApi.path("paths").path("/api/drivers").path("post").isMissingNode()).isTrue();
     }
 
     @Test

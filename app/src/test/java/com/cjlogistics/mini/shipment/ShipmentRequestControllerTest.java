@@ -29,6 +29,7 @@ class ShipmentRequestControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @MockitoBean ShipmentRequestService shipmentRequestService;
+    @MockitoBean com.cjlogistics.mini.dispatch.FareCalculator fareCalculator;
     @MockitoBean JwtTokenService jwtTokenService;
 
     private ShipmentRequest request() {
@@ -45,7 +46,7 @@ class ShipmentRequestControllerTest {
         ShipmentRequestCreateRequest body = new ShipmentRequestCreateRequest(1L, "서울", "부산", List.of(
                 new CargoItemCreateRequest("냉동식품 2박스", 200), new CargoItemCreateRequest("냉동식품 3박스", 300)), VehicleType.TRUCK_1T);
 
-        mockMvc.perform(post("/shipment-requests").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+        mockMvc.perform(post("/api/shipment-requests").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.cargoItems").isArray())
                 .andExpect(jsonPath("$.cargoItems.length()").value(2))
@@ -55,14 +56,14 @@ class ShipmentRequestControllerTest {
     @Test
     void create_rejects_empty_cargo_items() throws Exception {
         ShipmentRequestCreateRequest body = new ShipmentRequestCreateRequest(1L, "서울", "부산", List.of(), VehicleType.TRUCK_1T);
-        mockMvc.perform(post("/shipment-requests").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+        mockMvc.perform(post("/api/shipment-requests").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void create_rejects_non_positive_cargo_weight() throws Exception {
         ShipmentRequestCreateRequest body = new ShipmentRequestCreateRequest(1L, "서울", "부산", List.of(new CargoItemCreateRequest("cargo", 0)), VehicleType.TRUCK_1T);
-        mockMvc.perform(post("/shipment-requests").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
+        mockMvc.perform(post("/api/shipment-requests").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest());
     }
 }

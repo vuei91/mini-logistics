@@ -18,7 +18,7 @@ import type { DispatchResponse } from "@/lib/types";
 function DispatchCard({ dispatch }: { dispatch: DispatchResponse }) {
   return (
     <Link
-      href={`/driver/dispatches/${dispatch.id}`}
+      href={`/driver/dispatches/detail?id=${dispatch.id}`}
       className="block rounded-xl border border-zinc-200 bg-white p-5 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
     >
       <div className="flex items-start justify-between gap-3">

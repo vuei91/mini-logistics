@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { DispatchStepper } from "@/components/DispatchStepper";
 import { ErrorAlert } from "@/components/ErrorAlert";
@@ -161,12 +161,14 @@ function DispatchDetail({ id }: { id: number }) {
 }
 
 export function DispatchDetailClient() {
-  const params = useParams<{ id: string }>();
-  const id = Number(params.id);
+  // 쿼리스트링(?id=)에서 id 를 읽는다. 실제 브라우저 URL 과 항상 일치한다.
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get("id");
+  const id = Number(idParam);
 
   return (
     <RoleGuard role="DRIVER">
-      {Number.isNaN(id) ? (
+      {!idParam || Number.isNaN(id) ? (
         <ErrorAlert message="잘못된 배차입니다." />
       ) : (
         <DispatchDetail id={id} />

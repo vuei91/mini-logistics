@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ErrorAlert } from "@/components/ErrorAlert";
 import { RoleGuard } from "@/components/RoleGuard";
@@ -332,12 +332,14 @@ function RequestDetail({ id }: { id: number }) {
 }
 
 export function RequestDetailClient() {
-  const params = useParams<{ id: string }>();
-  const id = Number(params.id);
+  // 쿼리스트링(?id=)에서 id 를 읽는다. 실제 브라우저 URL 과 항상 일치한다.
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get("id");
+  const id = Number(idParam);
 
   return (
     <RoleGuard role="SHIPPER">
-      {Number.isNaN(id) ? (
+      {!idParam || Number.isNaN(id) ? (
         <ErrorAlert message="잘못된 요청입니다." />
       ) : (
         <RequestDetail id={id} />

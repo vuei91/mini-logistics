@@ -1,0 +1,12 @@
+# 로컬 테스트용 override.
+# prod 구성(docker-compose.prod.yml)을 그대로 쓰되, RDS 대신 H2 인메모리로
+# 뜨도록 DB 드라이버와 H2 콘솔만 덮어쓴다.
+# 사용:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.local.yml --env-file .env.local up -d
+services:
+  backend:
+    environment:
+      # H2 인메모리 사용을 위해 드라이버를 override
+      DB_DRIVER: org.h2.Driver
+      # 로컬에서는 H2 콘솔 열어 확인 가능
+      H2_CONSOLE_ENABLED: "true"
