@@ -18,7 +18,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: rabbitmq
       JAVA_TOOL_OPTIONS: >-
-        -Xms128m -Xmx256m -XX:MaxMetaspaceSize=96m
+        -Xms64m -Xmx192m -XX:MaxMetaspaceSize=160m
         -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
       # --- RDS PostgreSQL ---
       DB_URL: ${DB_URL}
