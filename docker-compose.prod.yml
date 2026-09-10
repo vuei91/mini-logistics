@@ -9,12 +9,17 @@ services:
     # 태그는 배포 시 BACKEND_IMAGE 로 주입한다(미지정 시 latest).
     image: ${BACKEND_IMAGE:-public.ecr.aws/i6n5a0h7/portfolio:latest}
     container_name: cj-logistics-backend
-    restart: unless-stopped
+    restart: "on-failure:3"
+    # t3.micro(1 GiB)에서 호스트 OS와 RabbitMQ 메모리를 침범하지 않도록 제한한다.
+    mem_limit: 448m
     depends_on:
       rabbitmq:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: rabbitmq
+      JAVA_TOOL_OPTIONS: >-
+        -Xms128m -Xmx256m -XX:MaxMetaspaceSize=96m
+        -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
       # --- RDS PostgreSQL ---
       DB_URL: ${DB_URL}
       DB_DRIVER: org.postgresql.Driver
@@ -39,7 +44,8 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: cj-logistics-rabbitmq
-    restart: unless-stopped
+    restart: "on-failure:3"
+    mem_limit: 256m
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
