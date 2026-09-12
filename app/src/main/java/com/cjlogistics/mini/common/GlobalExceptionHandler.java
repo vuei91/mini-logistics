@@ -18,6 +18,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -34,7 +36,7 @@ public class GlobalExceptionHandler {
             NotificationNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException e, HttpServletRequest req) {
-        return build(HttpStatus.NOT_FOUND, e.getMessage(), req);
+        return build(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, e.getMessage(), req);
     }
 
     @ExceptionHandler({
@@ -45,22 +47,22 @@ public class GlobalExceptionHandler {
             DuplicateDriverEmailException.class
     })
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException e, HttpServletRequest req) {
-        return build(HttpStatus.CONFLICT, e.getMessage(), req);
+        return build(HttpStatus.CONFLICT, ErrorCode.CONFLICT, e.getMessage(), req);
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorized(InvalidCredentialsException e, HttpServletRequest req) {
-        return build(HttpStatus.UNAUTHORIZED, e.getMessage(), req);
+        return build(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS, e.getMessage(), req);
     }
 
     @ExceptionHandler({DispatchAccessDeniedException.class, ShipmentAccessDeniedException.class})
     public ResponseEntity<ErrorResponse> handleForbidden(RuntimeException e, HttpServletRequest req) {
-        return build(HttpStatus.FORBIDDEN, e.getMessage(), req);
+        return build(HttpStatus.FORBIDDEN, ErrorCode.ACCESS_DENIED, e.getMessage(), req);
     }
 
     @ExceptionHandler(IllegalStatusTargetException.class)
     public ResponseEntity<ErrorResponse> handleIllegalTarget(IllegalStatusTargetException e, HttpServletRequest req) {
-        return build(HttpStatus.BAD_REQUEST, e.getMessage(), req);
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_REQUEST, e.getMessage(), req);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -68,11 +70,26 @@ public class GlobalExceptionHandler {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
                 .collect(Collectors.joining(", "));
-        return build(HttpStatus.BAD_REQUEST, message, req);
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED, message, req);
     }
 
-    private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, HttpServletRequest req) {
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMalformedRequest(HttpMessageNotReadableException e,
+                                                                 HttpServletRequest req) {
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.MALFORMED_REQUEST,
+                "요청 본문을 읽을 수 없습니다.", req);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e,
+                                                                 HttpServletRequest req) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED, ErrorCode.METHOD_NOT_ALLOWED,
+                "지원하지 않는 요청 방식입니다.", req);
+    }
+
+    private ResponseEntity<ErrorResponse> build(HttpStatus status, ErrorCode code, String message,
+                                                 HttpServletRequest req) {
         return ResponseEntity.status(status)
-                .body(ErrorResponse.of(status, message, req.getRequestURI()));
+                .body(ErrorResponse.of(status, code, message, req.getRequestURI()));
     }
 }

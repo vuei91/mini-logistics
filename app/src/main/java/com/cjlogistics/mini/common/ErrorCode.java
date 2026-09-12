@@ -1,0 +1,13 @@
+package com.cjlogistics.mini.common;
+
+public enum ErrorCode {
+    VALIDATION_FAILED,
+    MALFORMED_REQUEST,
+    INVALID_CREDENTIALS,
+    AUTHENTICATION_REQUIRED,
+    ACCESS_DENIED,
+    RESOURCE_NOT_FOUND,
+    CONFLICT,
+    INVALID_REQUEST,
+    METHOD_NOT_ALLOWED
+}

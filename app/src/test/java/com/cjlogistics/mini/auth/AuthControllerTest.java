@@ -102,6 +102,25 @@ class AuthControllerTest {
         given(shipperService.login(any(), any())).willThrow(new InvalidCredentialsException());
         mockMvc.perform(post("/api/auth/shippers/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"cj@example.com\",\"password\":\"wrong-password\"}"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 올바르지 않습니다."));
+    }
+
+    @Test
+    void invalid_login_fields_return_validation_error_code() throws Exception {
+        mockMvc.perform(post("/api/auth/shippers/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"not-an-email\",\"password\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    void malformed_login_json_returns_malformed_request_code() throws Exception {
+        mockMvc.perform(post("/api/auth/shippers/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"))
+                .andExpect(jsonPath("$.message").value("요청 본문을 읽을 수 없습니다."));
     }
 }

@@ -78,9 +78,11 @@ export async function apiFetch<T>(
     );
   }
 
-  if (res.status === 401) {
+  if (res.status === 401 && auth) {
     clearToken();
     if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      // 공통 HTTP 계층에서는 Next Router 훅을 사용할 수 없어 전체 이동으로 인증 상태를 초기화한다.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/login";
     }
     throw new ApiError(401, "인증이 만료되었습니다. 다시 로그인해주세요.");

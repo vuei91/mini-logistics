@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ErrorAlert } from "@/components/ErrorAlert";
 import { useAuth } from "@/contexts/AuthContext";
-import { ApiError } from "@/lib/api";
 import { authApi } from "@/lib/endpoints";
+import { getLoginErrorMessage } from "@/lib/login-error";
 import type { Role } from "@/lib/types";
 
 export default function LoginPage() {
@@ -43,11 +43,7 @@ export default function LoginPage() {
           : "/driver/dashboard",
       );
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "로그인 중 오류가 발생했습니다.",
-      );
+      setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }

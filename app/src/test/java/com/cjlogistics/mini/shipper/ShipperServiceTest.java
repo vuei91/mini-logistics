@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class ShipperServiceTest {
@@ -28,6 +29,8 @@ class ShipperServiceTest {
 
     @Mock
     ShipperRepository shipperRepository;
+    @Mock
+    PasswordEncoder passwordEncoder;
 
     @InjectMocks
     ShipperService shipperService;
@@ -81,5 +84,15 @@ class ShipperServiceTest {
 
         assertThatThrownBy(() -> shipperService.get(999L))
                 .isInstanceOf(ShipperNotFoundException.class);
+    }
+
+    @Test
+    void login_checks_a_password_hash_even_when_email_is_unknown() {
+        given(shipperRepository.findByEmail("missing@example.com")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> shipperService.login("missing@example.com", "password"))
+                .isInstanceOf(com.cjlogistics.mini.auth.InvalidCredentialsException.class);
+
+        verify(passwordEncoder).matches(org.mockito.ArgumentMatchers.eq("password"), any(String.class));
     }
 }

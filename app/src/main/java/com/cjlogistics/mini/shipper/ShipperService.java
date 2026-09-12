@@ -11,6 +11,8 @@ import com.cjlogistics.mini.auth.InvalidCredentialsException;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ShipperService {
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2y$10$Q4bnl6HFAZLzSVQSEAfeR.OHSUksZLk1slRI70YziXQvwBpVLCBHK";
 
     private final ShipperRepository shipperRepository;
     private final PasswordEncoder passwordEncoder;
@@ -30,9 +32,10 @@ public class ShipperService {
     }
 
     public Shipper login(String email, String password) {
-        Shipper shipper = shipperRepository.findByEmail(email.trim().toLowerCase(Locale.ROOT))
-                .orElseThrow(InvalidCredentialsException::new);
-        if (!passwordEncoder.matches(password, shipper.getPasswordHash())) throw new InvalidCredentialsException();
+        Shipper shipper = shipperRepository.findByEmail(email.trim().toLowerCase(Locale.ROOT)).orElse(null);
+        String passwordHash = shipper == null ? DUMMY_PASSWORD_HASH : shipper.getPasswordHash();
+        boolean passwordMatches = passwordEncoder.matches(password, passwordHash);
+        if (shipper == null || !passwordMatches) throw new InvalidCredentialsException();
         return shipper;
     }
 

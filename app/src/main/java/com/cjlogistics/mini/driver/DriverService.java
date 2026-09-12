@@ -13,6 +13,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DriverService {
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2y$10$Q4bnl6HFAZLzSVQSEAfeR.OHSUksZLk1slRI70YziXQvwBpVLCBHK";
 
     private final DriverRepository driverRepository;
     private final PasswordEncoder passwordEncoder;
@@ -52,9 +54,10 @@ public class DriverService {
     }
 
     public Driver login(String email, String password) {
-        Driver driver = driverRepository.findByEmail(email.trim().toLowerCase(Locale.ROOT))
-                .orElseThrow(InvalidCredentialsException::new);
-        if (!passwordEncoder.matches(password, driver.getPasswordHash())) throw new InvalidCredentialsException();
+        Driver driver = driverRepository.findByEmail(email.trim().toLowerCase(Locale.ROOT)).orElse(null);
+        String passwordHash = driver == null ? DUMMY_PASSWORD_HASH : driver.getPasswordHash();
+        boolean passwordMatches = passwordEncoder.matches(password, passwordHash);
+        if (driver == null || !passwordMatches) throw new InvalidCredentialsException();
         return driver;
     }
 

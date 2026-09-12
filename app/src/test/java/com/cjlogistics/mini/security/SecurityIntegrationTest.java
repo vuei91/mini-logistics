@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -35,7 +36,8 @@ class SecurityIntegrationTest {
         mockMvc.perform(post("/api/shipment-requests")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"shipperId\":1,\"originRegion\":\"서울\",\"destinationRegion\":\"부산\",\"requiredVehicleType\":\"TRUCK_1T\",\"cargoItems\":[{\"description\":\"화물\",\"weightKg\":1}]}"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
     }
 
     @Test
@@ -44,7 +46,8 @@ class SecurityIntegrationTest {
         mockMvc.perform(post("/api/shipment-requests").header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"shipperId\":1,\"originRegion\":\"서울\",\"destinationRegion\":\"부산\",\"requiredVehicleType\":\"TRUCK_1T\",\"cargoItems\":[{\"description\":\"화물\",\"weightKg\":1}]}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     @Test

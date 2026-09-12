@@ -211,6 +211,18 @@ export interface ErrorResponse {
   timestamp: string;
   status: number;
   error: string;
+  code:
+    | "VALIDATION_FAILED"
+    | "MALFORMED_REQUEST"
+    | "INVALID_CREDENTIALS"
+    | "AUTHENTICATION_REQUIRED"
+    | "ACCESS_DENIED"
+    | "RESOURCE_NOT_FOUND"
+    | "CONFLICT"
+    | "INVALID_REQUEST"
+    | "METHOD_NOT_ALLOWED"
+    | "TOO_MANY_REQUESTS"
+    | "INTERNAL_SERVER_ERROR";
   message: string;
   path: string;
 }
